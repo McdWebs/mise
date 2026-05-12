@@ -1,4 +1,4 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { LogOut, MonitorPlay } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSession } from '@/features/auth/hooks/useSession'
@@ -8,13 +8,14 @@ import { MenuPage } from './MenuPage'
 import { SettingsPage } from './SettingsPage'
 import { OrdersPage } from './OrdersPage'
 import { AssistantPage } from './AssistantPage'
-import { useState } from 'react'
+import { PlansPage } from './PlansPage'
 
-type AdminPage = 'overview' | 'menu' | 'settings' | 'orders' | 'assistant'
+type AdminPage = 'overview' | 'menu' | 'settings' | 'orders' | 'assistant' | 'plans'
 
 const NAV: { id: AdminPage; label: string }[] = [
   { id: 'overview',  label: 'Overview'  },
   { id: 'menu',      label: 'Menu'      },
+  { id: 'plans',     label: 'Plans'     },
   { id: 'settings',  label: 'Settings'  },
 ]
 
@@ -34,7 +35,6 @@ function Spinner() {
 export default function AdminShell() {
   const { user } = useSession()
   const { data: restaurant, isLoading } = useAdminRestaurant(user?.id)
-  const [page, setPage] = useState<AdminPage>('overview')
 
   async function signOut() {
     await supabase.auth.signOut()
@@ -52,12 +52,16 @@ export default function AdminShell() {
 
   function NavItem({ id, label }: { id: AdminPage; label: string }) {
     return (
-      <button
-        onClick={() => setPage(id)}
-        className={`flex items-center gap-2.5 px-2.5 py-2 rounded-2 text-body font-medium w-full text-left transition-colors duration-hover ${page === id ? 'bg-ink text-paper' : 'text-ink-5 hover:bg-paper-2 hover:text-ink'}`}
+      <NavLink
+        to={`/admin/${id}`}
+        className={({ isActive }) =>
+          `flex items-center gap-2.5 px-2.5 py-2 rounded-2 text-body font-medium w-full text-left transition-colors duration-hover ${
+            isActive ? 'bg-ink text-paper' : 'text-ink-5 hover:bg-paper-2 hover:text-ink'
+          }`
+        }
       >
         {label}
-      </button>
+      </NavLink>
     )
   }
 
@@ -126,13 +130,18 @@ export default function AdminShell() {
         </div>
       </aside>
 
-      {/* Main content */}
+      {/* Main content — nested routes so refresh keeps the current section */}
       <main className="flex-1 px-9 py-7 max-w-[1200px]">
-        {page === 'overview'  && <OverviewPage  restaurant={restaurant} />}
-        {page === 'menu'      && <MenuPage      restaurant={restaurant} />}
-        {page === 'settings'  && <SettingsPage  restaurant={restaurant} />}
-        {page === 'orders'    && <OrdersPage    restaurant={restaurant} />}
-        {page === 'assistant' && <AssistantPage restaurant={restaurant} />}
+        <Routes>
+          <Route index element={<Navigate to="overview" replace />} />
+          <Route path="overview" element={<OverviewPage restaurant={restaurant} />} />
+          <Route path="menu" element={<MenuPage restaurant={restaurant} />} />
+          <Route path="plans" element={<PlansPage restaurant={restaurant} />} />
+          <Route path="settings" element={<SettingsPage restaurant={restaurant} />} />
+          <Route path="orders" element={<OrdersPage restaurant={restaurant} />} />
+          <Route path="assistant" element={<AssistantPage restaurant={restaurant} />} />
+          <Route path="*" element={<Navigate to="/admin/overview" replace />} />
+        </Routes>
       </main>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { Send, X } from 'lucide-react'
 
 interface Message {
@@ -25,18 +25,29 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
   ])
   const [draft, setDraft] = useState('')
   const [loading, setLoading] = useState(false)
+  const [open, setOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const id = requestAnimationFrame(() => setOpen(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  const handleClose = useCallback(() => {
+    setOpen(false)
+    setTimeout(onClose, 300)
+  }, [onClose])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
     document.addEventListener('keydown', handler)
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', handler)
       document.body.style.overflow = ''
     }
-  }, [onClose])
+  }, [handleClose])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -120,12 +131,22 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
   return (
     <div
       className="fixed inset-0 z-10 flex items-end justify-center"
-      style={{ background: 'rgba(26,22,18,0.4)' }}
-      onClick={onClose}
+      style={{
+        background: 'rgba(26,22,18,0.4)',
+        opacity: open ? 1 : 0,
+        transition: 'opacity 240ms ease',
+      }}
+      onClick={handleClose}
     >
       <div
-        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 flex flex-col animate-slide-up"
-        style={{ minHeight: '60dvh', maxHeight: '88dvh' }}
+        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 flex flex-col"
+        style={{
+          minHeight: '60dvh',
+          maxHeight: '88dvh',
+          transform: open ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 320ms cubic-bezier(0.2,0.8,0.2,1)',
+          willChange: 'transform',
+        }}
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -144,7 +165,7 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
             <p className="text-[12px] text-ink-6">Answers grounded in tonight's menu</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="ml-auto text-ink-6 hover:text-ink transition-colors duration-hover p-1"
             aria-label="Close assistant"
           >

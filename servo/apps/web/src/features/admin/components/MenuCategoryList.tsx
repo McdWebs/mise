@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import type { AdminMenuCategory } from '../hooks/useAdminMenu'
@@ -21,6 +21,19 @@ export function MenuCategoryList({
   const [overId, setOverId] = useState<string | null>(null)
   const [addingName, setAddingName] = useState('')
   const [adding, setAdding] = useState(false)
+  const [menuFor, setMenuFor] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!menuFor) return
+    function handler(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuFor(null)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [menuFor])
 
   function onDragStart(id: string) {
     setDragId(id)
@@ -62,6 +75,38 @@ export function MenuCategoryList({
     qc.invalidateQueries({ queryKey: ['admin-menu'] })
   }
 
+  async function deleteCategory(cat: AdminMenuCategory) {
+    const n = cat.menu_items.length
+    const msg =
+      n > 0
+        ? `Delete “${cat.name}” and all ${n} item(s) in it? This cannot be undone.`
+        : `Delete empty category “${cat.name}”?`
+    if (!window.confirm(msg)) return
+
+    const { error } = await supabase.from('menu_categories').delete().eq('id', cat.id)
+    if (error) {
+      window.alert(
+        error.message ||
+          'Could not delete this category. Items may still be linked to past orders — remove or reassign them first.'
+      )
+      return
+    }
+
+    const remaining = categories.filter(c => c.id !== cat.id)
+    onLocalReorder(remaining)
+    if (cat.id === activeCategoryId) {
+      onSelect(remaining[0]?.id ?? '')
+    }
+    setMenuFor(null)
+
+    await Promise.all(
+      remaining.map((c, idx) =>
+        supabase.from('menu_categories').update({ sort_order: idx }).eq('id', c.id)
+      )
+    )
+    qc.invalidateQueries({ queryKey: ['admin-menu'] })
+  }
+
   return (
     <div className="flex flex-col gap-0.5">
       {categories.map(cat => {
@@ -78,16 +123,48 @@ export function MenuCategoryList({
             onClick={() => onSelect(cat.id)}
             className={`grid items-center gap-2 px-3 py-2.5 rounded-2 cursor-pointer transition-all duration-hover select-none ${cat.id === activeCategoryId ? 'bg-ink text-paper' : 'text-ink-5 hover:bg-paper-2 hover:text-ink'}`}
             style={{
-              gridTemplateColumns: '14px 1fr auto',
+              gridTemplateColumns: '14px 1fr auto 32px',
               opacity: isDragging ? 0.4 : 1,
               borderTop: isOver ? '2px solid var(--saffron)' : undefined,
             }}
           >
             <span className="text-[12px] text-ink-7 cursor-grab leading-none select-none" title="Drag to reorder">⋮⋮</span>
-            <span className="text-body font-medium">{cat.name}</span>
-            <span className={`font-mono text-[12px] ${cat.id === activeCategoryId ? 'text-ink-8' : 'text-ink-6'}`}>
+            <span className="text-body font-medium min-w-0 truncate">{cat.name}</span>
+            <span className={`font-mono text-[12px] tabular-nums ${cat.id === activeCategoryId ? 'text-ink-8' : 'text-ink-6'}`}>
               {cat.menu_items.length}
             </span>
+            <div
+              className="relative flex justify-center"
+              ref={menuFor === cat.id ? menuRef : undefined}
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation()
+                  setMenuFor(menuFor === cat.id ? null : cat.id)
+                }}
+                className={`font-bold text-[18px] px-1 leading-none transition-colors duration-hover ${
+                  cat.id === activeCategoryId ? 'text-ink-8 hover:text-paper' : 'text-ink-7 hover:text-ink'
+                }`}
+              >
+                ⋯
+              </button>
+              {menuFor === cat.id && (
+                <div
+                  onClick={e => e.stopPropagation()}
+                  className="absolute top-full right-0 z-20 mt-1 min-w-[180px] bg-paper border border-paper-3 rounded-3 shadow-1 p-1.5 text-left"
+                >
+                  <button
+                    type="button"
+                    onClick={() => deleteCategory(cat)}
+                    className="w-full text-left px-3 py-2.5 rounded-2 text-body-sm text-ember hover:bg-ember-wash transition-colors duration-hover"
+                  >
+                    Delete category
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         )
       })}

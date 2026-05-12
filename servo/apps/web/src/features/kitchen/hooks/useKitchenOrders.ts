@@ -4,7 +4,10 @@ import type { Order, OrderItem } from '@servo/types'
 import { playDing } from '../utils/timerUtils'
 
 export interface KitchenOrder extends Order {
-  order_items: (OrderItem & { menu_items: { name: string } | null })[]
+  order_items: (OrderItem & {
+    menu_items: { name: string } | null
+    restaurant_plans: { title: string; includes: string[] } | null
+  })[]
 }
 
 // "Just done" lane shows picked_up orders from the last 15 minutes
@@ -28,7 +31,7 @@ export function useKitchenOrders(restaurantId: string | undefined) {
       // Fetch active orders + recently picked_up
       const { data, error } = await supabase
         .from('orders')
-        .select('*, order_items(*, menu_items(name))')
+        .select('*, order_items(*, menu_items(name), restaurant_plans(title, includes))')
         .eq('restaurant_id', restaurantId)
         .neq('stage', 'cancelled')
         .or(`stage.neq.picked_up,updated_at.gte.${cutoff}`)
@@ -64,7 +67,7 @@ export function useKitchenOrders(restaurantId: string | undefined) {
           // Fetch with items
           const { data } = await supabase
             .from('orders')
-            .select('*, order_items(*, menu_items(name))')
+            .select('*, order_items(*, menu_items(name), restaurant_plans(title, includes))')
             .eq('id', newOrder.id)
             .single()
 

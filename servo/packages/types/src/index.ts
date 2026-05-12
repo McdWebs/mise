@@ -59,7 +59,8 @@ export interface Order {
 export interface OrderItem {
   id: string
   order_id: string
-  menu_item_id: string
+  menu_item_id: string | null
+  restaurant_plan_id: string | null
   quantity: number
   modifiers: string[]
   unit_price_cents: number

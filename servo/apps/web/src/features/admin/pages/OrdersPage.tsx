@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react'
 import { useAdminOrders } from '../hooks/useAdminOrders'
 import { StagePill } from '../components/StagePill'
+import { Sk } from '../components/Skeleton'
+import { formatPriceExact } from '@/features/guest/utils/formatPrice'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
 import type { OrderStage } from '@servo/types'
+import { orderLinesSummary } from '@/lib/orderLineLabel'
 
 type Range = 'today' | 'week'
 
@@ -17,21 +20,17 @@ function startOf(range: Range): string {
   return d.toISOString()
 }
 
-function itemsSummary(items: { quantity: number; menu_items: { name: string } | null }[]): string {
-  return items.map(i => `${i.menu_items?.name ?? '?'} ×${i.quantity}`).join(', ')
-}
-
-function exportCSV(orders: ReturnType<typeof useAdminOrders>['data']) {
+function exportCSV(orders: ReturnType<typeof useAdminOrders>['data'], currency: string) {
   if (!orders) return
   const rows = [
     ['Time', 'Table', 'Items', 'Status', 'Order', 'Total'],
     ...orders.map(o => [
       new Date(o.created_at).toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' }),
       o.table_label,
-      `"${itemsSummary(o.order_items)}"`,
+      `"${orderLinesSummary(o.order_items)}"`,
       o.stage,
       `#${o.id.slice(-4).toUpperCase()}`,
-      `$${(o.subtotal_cents / 100).toFixed(2)}`,
+      formatPriceExact(o.subtotal_cents, currency),
     ]),
   ]
   const csv = rows.map(r => r.join(',')).join('\n')
@@ -51,7 +50,7 @@ interface OrdersPageProps {
 export function OrdersPage({ restaurant }: OrdersPageProps) {
   const [range, setRange] = useState<Range>('today')
   const since = useMemo(() => startOf(range), [range])
-  const { data: orders = [] } = useAdminOrders(restaurant.id, since)
+  const { data: orders = [], isLoading } = useAdminOrders(restaurant.id, since)
 
   const rangeLabel = range === 'today'
     ? new Date().toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -77,7 +76,7 @@ export function OrdersPage({ restaurant }: OrdersPageProps) {
             </button>
           ))}
           <button
-            onClick={() => exportCSV(orders)}
+            onClick={() => exportCSV(orders, restaurant.currency)}
             className="px-3 py-1.5 rounded-pill border-[1.5px] border-paper-4 text-body-sm font-medium text-ink hover:border-ink-5 transition-colors duration-hover"
           >
             Export CSV
@@ -99,7 +98,20 @@ export function OrdersPage({ restaurant }: OrdersPageProps) {
           <span className="text-right">Total</span>
         </div>
 
-        {orders.length === 0 ? (
+        {isLoading ? (
+          <div className="divide-y divide-paper-3">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="grid gap-4 px-5 py-3.5 items-center" style={{ gridTemplateColumns: '80px 60px 1fr 120px 100px 80px' }}>
+                <Sk className="h-4 w-12" />
+                <Sk className="h-4 w-8" />
+                <Sk className="h-4 w-4/5" />
+                <Sk className="h-5 w-20 rounded-pill" />
+                <Sk className="h-4 w-14" />
+                <Sk className="h-4 w-12 ml-auto" />
+              </div>
+            ))}
+          </div>
+        ) : orders.length === 0 ? (
           <div className="px-5 py-8 text-center text-body-sm text-ink-6">
             No orders for this period.
           </div>
@@ -114,13 +126,13 @@ export function OrdersPage({ restaurant }: OrdersPageProps) {
                 {new Date(order.created_at).toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' })}
               </span>
               <span className="font-mono font-bold text-ink">{order.table_label}</span>
-              <span className="text-ink-5 truncate">{itemsSummary(order.order_items)}</span>
+              <span className="text-ink-5 truncate">{orderLinesSummary(order.order_items)}</span>
               <StagePill stage={order.stage as OrderStage} />
               <span className="font-mono text-[12px] text-ink-6">
                 #{order.id.slice(-4).toUpperCase()}
               </span>
               <span className="font-mono font-semibold text-ink text-right tabular-nums">
-                ${(order.subtotal_cents / 100).toFixed(2)}
+                {formatPriceExact(order.subtotal_cents, restaurant.currency)}
               </span>
             </div>
           ))

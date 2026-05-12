@@ -22,19 +22,23 @@ export default function OrderStatusPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('order_items')
-        .select('*, menu_items(name)')
+        .select('*, menu_items(name), restaurant_plans(title)')
         .eq('order_id', orderId!)
       if (error) throw error
-      type RawRow = { menu_items: { name: string } | null } & Record<string, unknown>
+      type RawRow = {
+        menu_items: { name: string } | null
+        restaurant_plans: { title: string } | null
+      } & Record<string, unknown>
       return ((data ?? []) as unknown as RawRow[]).map(row => ({
         id: row.id as string,
         order_id: row.order_id as string,
-        menu_item_id: row.menu_item_id as string,
+        menu_item_id: row.menu_item_id as string | null,
+        restaurant_plan_id: row.restaurant_plan_id as string | null,
         quantity: row.quantity as number,
         modifiers: (row.modifiers as string[]) ?? [],
         unit_price_cents: row.unit_price_cents as number,
         created_at: row.created_at as string,
-        itemName: row.menu_items?.name ?? 'Item',
+        itemName: row.restaurant_plans?.title ?? row.menu_items?.name ?? 'Item',
       }))
     },
     enabled: Boolean(orderId),

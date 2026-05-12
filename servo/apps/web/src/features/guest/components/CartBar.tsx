@@ -4,10 +4,11 @@ import { formatPriceExact } from '../utils/formatPrice'
 interface CartBarProps {
   itemCount: number
   totalCents: number
+  currency: string
   onOpen: () => void
 }
 
-export function CartBar({ itemCount, totalCents, onOpen }: CartBarProps) {
+export function CartBar({ itemCount, totalCents, currency, onOpen }: CartBarProps) {
   if (itemCount === 0) return null
 
   return (
@@ -27,7 +28,7 @@ export function CartBar({ itemCount, totalCents, onOpen }: CartBarProps) {
           </span>
         </div>
         <span className="font-mono text-[15px] font-semibold tabular-nums">
-          {formatPriceExact(totalCents)}
+          {formatPriceExact(totalCents, currency)}
         </span>
       </button>
     </div>

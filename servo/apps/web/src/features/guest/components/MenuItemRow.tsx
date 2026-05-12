@@ -4,10 +4,11 @@ import { DietTag } from './DietTag'
 
 interface MenuItemRowProps {
   item: MenuItem
+  currency: string
   onOpen: (item: MenuItem) => void
 }
 
-export function MenuItemRow({ item, onOpen }: MenuItemRowProps) {
+export function MenuItemRow({ item, currency, onOpen }: MenuItemRowProps) {
   return (
     <div
       role="button"
@@ -38,7 +39,7 @@ export function MenuItemRow({ item, onOpen }: MenuItemRowProps) {
         <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
           {item.tags.map(tag => <DietTag key={tag} tag={tag} />)}
           <span className="font-mono text-[14px] font-semibold text-ink tabular-nums ml-auto">
-            {formatPrice(item.price_cents)}
+            {formatPrice(item.price_cents, currency)}
           </span>
         </div>
       </div>

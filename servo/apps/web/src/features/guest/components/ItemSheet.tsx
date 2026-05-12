@@ -1,35 +1,47 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type { MenuItem } from '@servo/types'
 import { formatPrice, formatPriceExact } from '../utils/formatPrice'
 import { QuantityStepper } from './QuantityStepper'
 import { DietTag } from './DietTag'
-import type { CartLine } from '../store/cartStore'
+import type { CartMenuLine } from '../store/cartStore'
 
 interface ItemSheetProps {
   item: MenuItem
+  currency: string
   onClose: () => void
-  onAdd: (line: Omit<CartLine, 'quantity'> & { quantity: number }) => void
+  onAdd: (line: Omit<CartMenuLine, 'quantity'> & { quantity: number }) => void
 }
 
-export function ItemSheet({ item, onClose, onAdd }: ItemSheetProps) {
+export function ItemSheet({ item, currency, onClose, onAdd }: ItemSheetProps) {
   const [qty, setQty] = useState(1)
   const [request, setRequest] = useState('')
+  const [open, setOpen] = useState(false)
 
-  // Close on Escape
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const id = requestAnimationFrame(() => setOpen(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  const handleClose = useCallback(() => {
+    setOpen(false)
+    setTimeout(onClose, 300)
+  }, [onClose])
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') handleClose() }
     document.addEventListener('keydown', handler)
     document.body.style.overflow = 'hidden'
     return () => {
       document.removeEventListener('keydown', handler)
       document.body.style.overflow = ''
     }
-  }, [onClose])
+  }, [handleClose])
 
   const lineTotalCents = item.price_cents * qty
 
   function handleAdd() {
     onAdd({
+      kind: 'menu',
       menuItemId: item.id,
       name: item.name,
       unitPriceCents: item.price_cents,
@@ -42,11 +54,20 @@ export function ItemSheet({ item, onClose, onAdd }: ItemSheetProps) {
   return (
     <div
       className="fixed inset-0 z-10 flex items-end justify-center"
-      style={{ background: 'rgba(26,22,18,0.4)' }}
-      onClick={onClose}
+      style={{
+        background: 'rgba(26,22,18,0.4)',
+        opacity: open ? 1 : 0,
+        transition: 'opacity 240ms ease',
+      }}
+      onClick={handleClose}
     >
       <div
-        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 max-h-[88dvh] overflow-y-auto animate-slide-up"
+        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 max-h-[88dvh] overflow-y-auto"
+        style={{
+          transform: open ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 320ms cubic-bezier(0.2,0.8,0.2,1)',
+          willChange: 'transform',
+        }}
         onClick={e => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
@@ -61,7 +82,7 @@ export function ItemSheet({ item, onClose, onAdd }: ItemSheetProps) {
             {item.name}
           </h2>
           <span className="font-mono text-[18px] font-semibold text-ink tabular-nums shrink-0">
-            {formatPrice(item.price_cents)}
+            {formatPrice(item.price_cents, currency)}
           </span>
         </div>
 
@@ -91,7 +112,7 @@ export function ItemSheet({ item, onClose, onAdd }: ItemSheetProps) {
         <div className="flex items-center justify-between py-3.5 border-t border-paper-3">
           <QuantityStepper value={qty} onChange={setQty} />
           <span className="font-mono text-[16px] font-semibold text-ink tabular-nums">
-            {formatPriceExact(lineTotalCents)}
+            {formatPriceExact(lineTotalCents, currency)}
           </span>
         </div>
 
@@ -101,7 +122,7 @@ export function ItemSheet({ item, onClose, onAdd }: ItemSheetProps) {
           className="w-full h-12 rounded-[10px] bg-saffron text-paper text-[15px] font-semibold flex items-center justify-between px-5 transition-colors duration-hover hover:bg-saffron-2 active:scale-[0.98] active:duration-press"
         >
           <span>Add {qty} to order</span>
-          <span className="font-mono">{formatPriceExact(lineTotalCents)}</span>
+          <span className="font-mono">{formatPriceExact(lineTotalCents, currency)}</span>
         </button>
       </div>
     </div>

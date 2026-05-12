@@ -3,17 +3,12 @@ import { useKitchenOrders } from '@/features/kitchen/hooks/useKitchenOrders'
 import { elapsedSeconds, fmtTimer } from '@/features/kitchen/utils/timerUtils'
 import { StagePill } from './StagePill'
 import type { OrderStage } from '@servo/types'
+import { orderLinesSummary } from '@/lib/orderLineLabel'
 
 const ACTIVE_STAGES: OrderStage[] = ['received', 'cooking', 'ready']
 
 interface LiveOrdersStripProps {
   restaurantId: string
-}
-
-function itemsSummary(items: { quantity: number; menu_items: { name: string } | null }[]): string {
-  return items
-    .map(i => `${i.menu_items?.name ?? '?'} ×${i.quantity}`)
-    .join(', ')
 }
 
 export function LiveOrdersStrip({ restaurantId }: LiveOrdersStripProps) {
@@ -52,7 +47,7 @@ export function LiveOrdersStrip({ restaurantId }: LiveOrdersStripProps) {
           style={{ gridTemplateColumns: '60px 1fr 110px 90px 80px' }}
         >
           <span className="font-mono font-bold text-ink">{order.table_label}</span>
-          <span className="text-ink-5 truncate">{itemsSummary(order.order_items)}</span>
+          <span className="text-ink-5 truncate">{orderLinesSummary(order.order_items)}</span>
           <StagePill stage={order.stage as OrderStage} />
           <span className="font-mono text-[13px] text-ink-5 tabular-nums">
             {fmtTimer(elapsedSeconds(order.created_at))}

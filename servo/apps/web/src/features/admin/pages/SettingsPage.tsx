@@ -5,6 +5,29 @@ import { useQueryClient } from '@tanstack/react-query'
 import { OrderingToggle } from '@/features/kitchen/components/OrderingToggle'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
 
+const CURRENCIES = [
+  { code: 'USD', label: 'USD – US Dollar ($)'           },
+  { code: 'EUR', label: 'EUR – Euro (€)'                },
+  { code: 'GBP', label: 'GBP – British Pound (£)'       },
+  { code: 'CAD', label: 'CAD – Canadian Dollar ($)'     },
+  { code: 'AUD', label: 'AUD – Australian Dollar ($)'   },
+  { code: 'NZD', label: 'NZD – New Zealand Dollar ($)'  },
+  { code: 'SGD', label: 'SGD – Singapore Dollar (S$)'   },
+  { code: 'HKD', label: 'HKD – Hong Kong Dollar (HK$)'  },
+  { code: 'ILS', label: 'ILS – Israeli Shekel (₪)'      },
+  { code: 'JPY', label: 'JPY – Japanese Yen (¥)'        },
+  { code: 'CHF', label: 'CHF – Swiss Franc (Fr.)'       },
+  { code: 'NOK', label: 'NOK – Norwegian Krone (kr)'    },
+  { code: 'SEK', label: 'SEK – Swedish Krona (kr)'      },
+  { code: 'DKK', label: 'DKK – Danish Krone (kr)'       },
+  { code: 'MXN', label: 'MXN – Mexican Peso ($)'        },
+  { code: 'BRL', label: 'BRL – Brazilian Real (R$)'     },
+  { code: 'INR', label: 'INR – Indian Rupee (₹)'        },
+  { code: 'ZAR', label: 'ZAR – South African Rand (R)'  },
+  { code: 'AED', label: 'AED – UAE Dirham (د.إ)'        },
+  { code: 'THB', label: 'THB – Thai Baht (฿)'           },
+]
+
 interface SettingsPageProps {
   restaurant: AdminRestaurant
 }
@@ -122,12 +145,16 @@ export function SettingsPage({ restaurant }: SettingsPageProps) {
           </div>
         </SettingRow>
 
-        <SettingRow label="Currency" description="All prices on your menu use this.">
-          <input
+        <SettingRow label="Currency" description="Symbol shown on every price across your menu and guest receipt.">
+          <select
             value={currency}
             onChange={e => setCurrency(e.target.value)}
-            className="w-[160px] px-3 py-2.5 border-[1.5px] border-paper-4 rounded-2 text-body text-ink bg-paper focus-visible:outline-none focus-visible:border-saffron transition-[border-color] duration-standard"
-          />
+            className="w-[260px] px-3 py-2.5 border-[1.5px] border-paper-4 rounded-2 text-body text-ink bg-paper focus-visible:outline-none focus-visible:border-saffron transition-[border-color] duration-standard appearance-none cursor-pointer"
+          >
+            {CURRENCIES.map(c => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </select>
         </SettingRow>
 
         <SettingRow label="Ordering" description="Pause to stop accepting new orders without taking the menu down.">

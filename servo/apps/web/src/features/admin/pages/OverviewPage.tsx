@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 import { KpiTile } from '../components/KpiTile'
 import { LiveOrdersStrip } from '../components/LiveOrdersStrip'
 import { useAdminOrders } from '../hooks/useAdminOrders'
+import { Sk } from '../components/Skeleton'
+import { formatPrice } from '@/features/guest/utils/formatPrice'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
 
 function startOfToday(): string {
@@ -26,12 +28,14 @@ interface OverviewPageProps {
 
 export function OverviewPage({ restaurant }: OverviewPageProps) {
   const since = useMemo(startOfToday, [])
-  const { data: orders = [] } = useAdminOrders(restaurant.id, since)
+  const { data: orders = [], isLoading } = useAdminOrders(restaurant.id, since)
+  const spark = useMemo(() => hourlyBuckets(orders), [orders])
+
+  if (isLoading) return <OverviewSkeleton />
 
   const orderCount = orders.filter(o => o.stage !== 'cancelled').length
-  const revenue = orders.reduce((sum, o) => sum + o.subtotal_cents, 0) / 100
-  const avgTicket = orderCount > 0 ? revenue / orderCount : 0
-  const spark = useMemo(() => hourlyBuckets(orders), [orders])
+  const revenueCents = orders.reduce((sum, o) => sum + o.subtotal_cents, 0)
+  const avgTicketCents = orderCount > 0 ? Math.round(revenueCents / orderCount) : 0
 
   const today = new Date().toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })
 
@@ -56,14 +60,14 @@ export function OverviewPage({ restaurant }: OverviewPageProps) {
         />
         <KpiTile
           label="Revenue"
-          value={`$${revenue.toFixed(2)}`}
-          delta={revenue > 0 ? `+$${revenue.toFixed(0)}` : 'None yet'}
+          value={revenueCents > 0 ? formatPrice(revenueCents, restaurant.currency) : '—'}
+          delta={revenueCents > 0 ? formatPrice(revenueCents, restaurant.currency) : 'None yet'}
           spark={spark.map(v => v * 30)}
         />
         <KpiTile
           label="Avg. ticket"
-          value={avgTicket > 0 ? `$${avgTicket.toFixed(2)}` : '—'}
-          delta={avgTicket > 0 ? `per order` : 'No orders'}
+          value={avgTicketCents > 0 ? formatPrice(avgTicketCents, restaurant.currency) : '—'}
+          delta={avgTicketCents > 0 ? 'per order' : 'No orders'}
           deltaDown={false}
           spark={spark}
         />
@@ -84,6 +88,50 @@ export function OverviewPage({ restaurant }: OverviewPageProps) {
           {orders.filter(o => ['received','cooking','ready'].includes(o.stage)).length} active
         </div>
         <LiveOrdersStrip restaurantId={restaurant.id} />
+      </div>
+    </>
+  )
+}
+
+function OverviewSkeleton() {
+  return (
+    <>
+      <div className="flex items-baseline justify-between mb-6">
+        <div className="space-y-2">
+          <Sk className="h-8 w-56" />
+          <Sk className="h-4 w-40" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-4 gap-3 mb-7">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="bg-paper border border-paper-3 rounded-3 p-4 space-y-3">
+            <Sk className="h-3 w-24" />
+            <Sk className="h-9 w-16" />
+            <Sk className="h-3 w-20" />
+            <div className="flex items-end gap-0.5 h-6 mt-1">
+              {Array.from({ length: 12 }).map((_, j) => (
+                <Sk key={j} className="flex-1 rounded-[2px]" style={{ height: `${20 + Math.random() * 80}%` }} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-paper border border-paper-3 rounded-3 p-5">
+        <Sk className="h-6 w-32 mb-2" />
+        <Sk className="h-3 w-20 mb-5" />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="grid gap-4 items-center" style={{ gridTemplateColumns: '60px 1fr 110px 90px 80px' }}>
+              <Sk className="h-4 w-full" />
+              <Sk className="h-4 w-3/4" />
+              <Sk className="h-5 w-20 rounded-pill" />
+              <Sk className="h-4 w-16" />
+              <Sk className="h-4 w-12 ml-auto" />
+            </div>
+          ))}
+        </div>
       </div>
     </>
   )

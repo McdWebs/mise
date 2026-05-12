@@ -9,10 +9,7 @@ interface CoverScreenProps {
 
 export function CoverScreen({ restaurant, tableLabel, onEnter }: CoverScreenProps) {
   return (
-    <div
-      className="relative min-h-dvh flex flex-col px-6 pt-12 pb-8 bg-paper"
-      style={{ backgroundImage: 'url(/assets/pattern-tablecloth.svg)', backgroundRepeat: 'repeat' }}
-    >
+    <div className="relative min-h-dvh flex flex-col px-6 pt-12 pb-8">
       {/* Brand mark */}
       <div className="flex items-center gap-2.5 mb-10">
         <img

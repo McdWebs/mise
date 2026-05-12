@@ -97,29 +97,40 @@ export function TicketDrawer({ order, onClose }: TicketDrawerProps) {
 
         {/* Order items */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
-          {order?.order_items.map(item => (
-            <div key={item.id}>
-              <div className="flex gap-2">
-                <span className="font-mono text-[11px] text-ink-6 shrink-0 mt-0.5">
-                  {item.quantity}×
-                </span>
-                <div className="min-w-0">
-                  <p className="text-body text-ink font-medium">
-                    {item.menu_items?.name ?? '—'}
-                  </p>
-                  {item.modifiers && item.modifiers.length > 0 && (
-                    <div className="mt-1.5 px-2 py-1.5 bg-ember-wash rounded-1 space-y-0.5">
-                      {item.modifiers.map((mod, i) => (
-                        <p key={i} className="text-body-sm text-ember">
-                          {mod}
-                        </p>
-                      ))}
-                    </div>
-                  )}
+          {order?.order_items.map(item => {
+            const plan = Boolean(item.restaurant_plan_id)
+            const title = item.restaurant_plans?.title ?? item.menu_items?.name ?? '—'
+            const detailLines =
+              plan && item.restaurant_plans?.includes?.length
+                ? item.restaurant_plans.includes
+                : item.modifiers ?? []
+            return (
+              <div key={item.id}>
+                <div className="flex gap-2">
+                  <span className="font-mono text-[11px] text-ink-6 shrink-0 mt-0.5">
+                    {item.quantity}×
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-body text-ink font-medium">
+                      {title}
+                      {plan && (
+                        <span className="ml-2 text-overline text-saffron tracking-widest">plan</span>
+                      )}
+                    </p>
+                    {detailLines.length > 0 && (
+                      <div className="mt-1.5 px-2 py-1.5 bg-ember-wash rounded-1 space-y-0.5">
+                        {detailLines.map((mod, i) => (
+                          <p key={i} className="text-body-sm text-ember">
+                            {mod}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
 
         {/* Subtotal */}

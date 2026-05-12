@@ -37,7 +37,7 @@ export default function App() {
 
         {/* Admin */}
         <Route
-          path="/admin"
+          path="/admin/*"
           element={
             <AuthGuard>
               <AdminShell />

@@ -3,6 +3,7 @@ import { useAdminMenu } from '../hooks/useAdminMenu'
 import { MenuCategoryList } from '../components/MenuCategoryList'
 import { MenuItemTable } from '../components/MenuItemTable'
 import { ItemEditDrawer } from '../components/ItemEditDrawer'
+import { Sk } from '../components/Skeleton'
 import type { AdminMenuCategory, AdminMenuItem } from '../hooks/useAdminMenu'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
 
@@ -11,11 +12,13 @@ interface MenuPageProps {
 }
 
 export function MenuPage({ restaurant }: MenuPageProps) {
-  const { data: fetchedCategories = [] } = useAdminMenu(restaurant.id)
+  const { data: fetchedCategories = [], isLoading } = useAdminMenu(restaurant.id)
 
   // Local state mirrors DB, updated optimistically for drag-reorder
   const [categories, setCategories] = useState<AdminMenuCategory[]>([])
   const [activeCatId, setActiveCatId] = useState<string>('')
+  // Item drawer state: undefined=closed, null=new, AdminMenuItem=edit
+  const [editingItem, setEditingItem] = useState<AdminMenuItem | null | undefined>(undefined)
 
   // Sync from server
   useEffect(() => {
@@ -27,8 +30,7 @@ export function MenuPage({ restaurant }: MenuPageProps) {
     }
   }, [fetchedCategories])
 
-  // Item drawer state: undefined=closed, null=new, AdminMenuItem=edit
-  const [editingItem, setEditingItem] = useState<AdminMenuItem | null | undefined>(undefined)
+  if (isLoading) return <MenuSkeleton />
 
   const activeCategory = categories.find(c => c.id === activeCatId)
   const items = activeCategory?.menu_items ?? []
@@ -94,6 +96,51 @@ export function MenuPage({ restaurant }: MenuPageProps) {
         item={editingItem ?? null}
         onClose={() => setEditingItem(undefined)}
       />
+    </>
+  )
+}
+
+function MenuSkeleton() {
+  return (
+    <>
+      <div className="flex items-baseline justify-between mb-6">
+        <div className="space-y-2">
+          <Sk className="h-8 w-24" />
+          <Sk className="h-4 w-72" />
+        </div>
+        <Sk className="h-10 w-28 rounded-2" />
+      </div>
+
+      <div className="bg-paper border border-paper-3 rounded-3 p-5">
+        <div className="grid gap-5" style={{ gridTemplateColumns: '220px 1fr' }}>
+          {/* Category list */}
+          <div className="space-y-1.5 border-r border-paper-3 pr-5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Sk key={i} className="h-9 w-full rounded-2" />
+            ))}
+          </div>
+
+          {/* Item table */}
+          <div>
+            <div className="grid gap-4 pb-3 border-b border-paper-3 mb-1" style={{ gridTemplateColumns: '1fr 90px 80px 40px' }}>
+              {['', '', '', ''].map((_, i) => <Sk key={i} className="h-3 w-full" />)}
+            </div>
+            <div className="space-y-px">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="grid gap-4 py-3 items-center" style={{ gridTemplateColumns: '1fr 90px 80px 40px' }}>
+                  <div className="space-y-1.5">
+                    <Sk className="h-4 w-3/4" />
+                    <Sk className="h-3 w-1/2" />
+                  </div>
+                  <Sk className="h-4 w-16" />
+                  <Sk className="h-6 w-12 rounded-pill" />
+                  <Sk className="h-6 w-6 rounded-2" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   )
 }

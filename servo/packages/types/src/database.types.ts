@@ -162,6 +162,51 @@ export interface Database {
         }
         Relationships: Rel[]
       }
+      restaurant_plans: {
+        Row: {
+          id: string
+          restaurant_id: string
+          title: string
+          description: string | null
+          price_cents: number
+          includes: string[]
+          active: boolean
+          sort_order: number
+          start_time: string | null
+          end_time: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          title: string
+          description?: string | null
+          price_cents: number
+          includes?: string[]
+          active?: boolean
+          sort_order?: number
+          start_time?: string | null
+          end_time?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          title?: string
+          description?: string | null
+          price_cents?: number
+          includes?: string[]
+          active?: boolean
+          sort_order?: number
+          start_time?: string | null
+          end_time?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: Rel[]
+      }
       orders: {
         Row: {
           id: string
@@ -196,7 +241,8 @@ export interface Database {
         Row: {
           id: string
           order_id: string
-          menu_item_id: string
+          menu_item_id: string | null
+          restaurant_plan_id: string | null
           quantity: number
           modifiers: string[]
           unit_price_cents: number
@@ -205,7 +251,8 @@ export interface Database {
         Insert: {
           id?: string
           order_id: string
-          menu_item_id: string
+          menu_item_id?: string | null
+          restaurant_plan_id?: string | null
           quantity: number
           modifiers?: string[]
           unit_price_cents: number
@@ -214,7 +261,8 @@ export interface Database {
         Update: {
           id?: string
           order_id?: string
-          menu_item_id?: string
+          menu_item_id?: string | null
+          restaurant_plan_id?: string | null
           quantity?: number
           modifiers?: string[]
           unit_price_cents?: number

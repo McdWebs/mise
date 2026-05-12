@@ -53,25 +53,38 @@ export function OrderTicket({ order, pulsing, tick: _tick, onClick }: OrderTicke
 
         {/* Item lines */}
         <ul className="space-y-0.5">
-          {order.order_items.map(item => (
-            <li key={item.id}>
-              <span className="font-mono text-[11px] text-ink-6 mr-1.5">
-                {item.quantity}×
-              </span>
-              <span className="text-body-sm text-ink">
-                {item.menu_items?.name ?? '—'}
-              </span>
-              {item.modifiers && item.modifiers.length > 0 && (
-                <div className="mt-0.5 pl-5 space-y-0.5">
-                  {item.modifiers.map((mod, i) => (
-                    <p key={i} className="text-[11px] text-ember leading-tight">
-                      {mod}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </li>
-          ))}
+          {order.order_items.map(item => {
+            const plan = Boolean(item.restaurant_plan_id)
+            const title = item.restaurant_plans?.title ?? item.menu_items?.name ?? '—'
+            const detailLines =
+              plan && item.restaurant_plans?.includes?.length
+                ? item.restaurant_plans.includes
+                : item.modifiers ?? []
+            return (
+              <li key={item.id}>
+                <span className="font-mono text-[11px] text-ink-6 mr-1.5">
+                  {item.quantity}×
+                </span>
+                <span className="text-body-sm text-ink">
+                  {title}
+                  {plan && (
+                    <span className="ml-1.5 text-[9px] font-mono font-bold text-saffron uppercase tracking-wider">
+                      plan
+                    </span>
+                  )}
+                </span>
+                {detailLines.length > 0 && (
+                  <div className="mt-0.5 pl-5 space-y-0.5">
+                    {detailLines.map((mod, i) => (
+                      <p key={i} className="text-[11px] text-ember leading-tight">
+                        {mod}
+                      </p>
+                    ))}
+                  </div>
+                )}
+              </li>
+            )
+          })}
         </ul>
       </div>
 

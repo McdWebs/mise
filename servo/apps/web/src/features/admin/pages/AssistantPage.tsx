@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { KpiTile } from '../components/KpiTile'
+import { Sk } from '../components/Skeleton'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
 
 function startOfToday(): string {
@@ -22,7 +23,7 @@ interface AssistantPageProps {
 export function AssistantPage({ restaurant }: AssistantPageProps) {
   const since = startOfToday()
 
-  const { data: conversations = [] } = useQuery<Conversation[]>({
+  const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
     queryKey: ['admin-conversations', restaurant.id, since],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -37,6 +38,8 @@ export function AssistantPage({ restaurant }: AssistantPageProps) {
   })
 
   const total = conversations.length
+
+  if (isLoading) return <AssistantSkeleton />
 
   return (
     <>
@@ -92,6 +95,45 @@ export function AssistantPage({ restaurant }: AssistantPageProps) {
             {total} conversation{total !== 1 ? 's' : ''} today. Full question analytics arrive in phase 6.
           </p>
         )}
+      </div>
+    </>
+  )
+}
+
+function AssistantSkeleton() {
+  return (
+    <>
+      <div className="mb-6 space-y-2">
+        <Sk className="h-8 w-36" />
+        <Sk className="h-4 w-80" />
+      </div>
+
+      <div className="grid grid-cols-3 gap-3 mb-7">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bg-paper border border-paper-3 rounded-3 p-4 space-y-3">
+            <Sk className="h-3 w-28" />
+            <Sk className="h-9 w-12" />
+            <Sk className="h-3 w-16" />
+            <div className="flex items-end gap-0.5 h-6 mt-1">
+              {Array.from({ length: 12 }).map((_, j) => (
+                <Sk key={j} className="flex-1 rounded-[2px]" style={{ height: `${20 + Math.random() * 80}%` }} />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="bg-paper border border-paper-3 rounded-3 p-5">
+        <Sk className="h-6 w-44 mb-2" />
+        <Sk className="h-4 w-96 mb-5" />
+        <div className="space-y-3">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 py-2 border-b border-paper-3 last:border-0">
+              <Sk className="h-4 flex-1" />
+              <Sk className="h-4 w-10" />
+            </div>
+          ))}
+        </div>
       </div>
     </>
   )
