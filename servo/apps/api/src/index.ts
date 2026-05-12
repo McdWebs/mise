@@ -1,6 +1,7 @@
 import 'dotenv/config'
 import Fastify from 'fastify'
 import cors from '@fastify/cors'
+import { registerAssistant } from './assistant.js'
 
 const app = Fastify({ logger: true })
 
@@ -11,6 +12,9 @@ await app.register(cors, {
 
 // Health check
 app.get('/health', async () => ({ status: 'ok', ts: new Date().toISOString() }))
+
+// AI assistant (Phase 6)
+await registerAssistant(app)
 
 // TODO: payments — wire payment provider here in Phase 8
 

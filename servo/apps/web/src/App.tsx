@@ -7,6 +7,7 @@ const GuestMenuPage = lazy(() => import('./features/guest/pages/GuestMenuPage'))
 const OrderStatusPage = lazy(() => import('./features/guest/pages/OrderStatusPage'))
 const LoginPage = lazy(() => import('./features/auth/pages/LoginPage'))
 const KitchenPage = lazy(() => import('./features/kitchen/pages/KitchenPage'))
+const AdminShell = lazy(() => import('./features/admin/pages/AdminShell'))
 
 function Spinner() {
   return (
@@ -24,13 +25,25 @@ export default function App() {
         <Route path="/r/:slug" element={<GuestMenuPage />} />
         <Route path="/r/:slug/order/:orderId" element={<OrderStatusPage />} />
 
-        {/* Kitchen */}
+        {/* Auth */}
         <Route path="/login" element={<LoginPage />} />
+
+        {/* Kitchen */}
         <Route
           path="/kitchen"
           element={
             <AuthGuard>
               <KitchenPage />
+            </AuthGuard>
+          }
+        />
+
+        {/* Admin */}
+        <Route
+          path="/admin"
+          element={
+            <AuthGuard>
+              <AdminShell />
             </AuthGuard>
           }
         />

@@ -18,7 +18,13 @@ export default function LoginPage() {
     setLoading(true)
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
     if (authError) {
-      setError('Incorrect email or password.')
+      // Supabase may return WeakPasswordError, email not confirmed, etc. — surface message for debugging
+      const msg = authError.message?.trim()
+      setError(
+        msg && !/invalid login credentials/i.test(msg)
+          ? msg
+          : 'Incorrect email or password.'
+      )
       setLoading(false)
       return
     }

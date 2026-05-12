@@ -1,0 +1,99 @@
+import { useEffect, useState } from 'react'
+import { useAdminMenu } from '../hooks/useAdminMenu'
+import { MenuCategoryList } from '../components/MenuCategoryList'
+import { MenuItemTable } from '../components/MenuItemTable'
+import { ItemEditDrawer } from '../components/ItemEditDrawer'
+import type { AdminMenuCategory, AdminMenuItem } from '../hooks/useAdminMenu'
+import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
+
+interface MenuPageProps {
+  restaurant: AdminRestaurant
+}
+
+export function MenuPage({ restaurant }: MenuPageProps) {
+  const { data: fetchedCategories = [] } = useAdminMenu(restaurant.id)
+
+  // Local state mirrors DB, updated optimistically for drag-reorder
+  const [categories, setCategories] = useState<AdminMenuCategory[]>([])
+  const [activeCatId, setActiveCatId] = useState<string>('')
+
+  // Sync from server
+  useEffect(() => {
+    if (fetchedCategories.length > 0) {
+      setCategories(fetchedCategories)
+      if (!activeCatId || !fetchedCategories.find(c => c.id === activeCatId)) {
+        setActiveCatId(fetchedCategories[0].id)
+      }
+    }
+  }, [fetchedCategories])
+
+  // Item drawer state: undefined=closed, null=new, AdminMenuItem=edit
+  const [editingItem, setEditingItem] = useState<AdminMenuItem | null | undefined>(undefined)
+
+  const activeCategory = categories.find(c => c.id === activeCatId)
+  const items = activeCategory?.menu_items ?? []
+
+  function handleLocalItemReorder(sorted: AdminMenuItem[]) {
+    setCategories(prev =>
+      prev.map(cat =>
+        cat.id === activeCatId ? { ...cat, menu_items: sorted } : cat
+      )
+    )
+  }
+
+  return (
+    <>
+      <div className="flex items-baseline justify-between mb-6">
+        <div>
+          <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">Menu</h1>
+          <div className="text-body-sm text-ink-6 mt-0.5">
+            Edit categories, items, prices, and availability. Drag rows to reorder.
+          </div>
+        </div>
+        <button
+          onClick={() => setEditingItem(null)}
+          className="px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover active:scale-[0.98] active:duration-press"
+        >
+          + New item
+        </button>
+      </div>
+
+      <div className="bg-paper border border-paper-3 rounded-3 p-5">
+        <div className="grid gap-5" style={{ gridTemplateColumns: '220px 1fr' }}>
+          {/* Category list */}
+          <MenuCategoryList
+            categories={categories}
+            activeCategoryId={activeCatId}
+            onSelect={setActiveCatId}
+            onLocalReorder={setCategories}
+          />
+
+          {/* Item table */}
+          <div>
+            {activeCategory ? (
+              <MenuItemTable
+                items={items}
+                categories={categories}
+                activeCategoryId={activeCatId}
+                categoryName={activeCategory.name}
+                onEdit={item => setEditingItem(item)}
+                onAdd={() => setEditingItem(null)}
+                onLocalReorder={handleLocalItemReorder}
+              />
+            ) : (
+              <p className="text-body-sm text-ink-6 py-4">Select a category.</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <ItemEditDrawer
+        open={editingItem !== undefined}
+        categoryId={activeCatId}
+        categoryName={activeCategory?.name ?? ''}
+        item={editingItem ?? null}
+        onClose={() => setEditingItem(undefined)}
+      />
+    </>
+  )
+}

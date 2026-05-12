@@ -10,11 +10,14 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.76",
+    "@fastify/cors": "^9.0.1",
     "@servo/types": "workspace:*",
     "@supabase/supabase-js": "^2.43.4",
+    "ai": "^6.0.177",
+    "dotenv": "^16.4.5",
     "fastify": "^4.28.0",
-    "@fastify/cors": "^9.0.1",
-    "dotenv": "^16.4.5"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/node": "^20.14.9",
