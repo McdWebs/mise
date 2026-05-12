@@ -1,0 +1,52 @@
+/* Tailwind base layers */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Self-host Fraunces variable font */
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/Fraunces-VariableFont_SOFT_WONK_opsz_wght.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/Fraunces-Italic-VariableFont_SOFT_WONK_opsz_wght.ttf') format('truetype-variations');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@layer base {
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html, body {
+    @apply bg-paper text-ink font-sans;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Focus ring — saffron, matches design spec */
+  :focus-visible {
+    outline: 2px solid theme('colors.saffron.DEFAULT');
+    outline-offset: 2px;
+    border-radius: theme('borderRadius.2');
+  }
+
+  /* Tabular numbers helper */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer utilities {
+  .font-optical {
+    font-optical-sizing: auto;
+  }
+}

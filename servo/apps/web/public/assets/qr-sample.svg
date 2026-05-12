@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <rect width="200" height="200" fill="#FAF6F0"></rect>
+  <g fill="#1A1612">
+    
+    <rect x="10" y="10" width="50" height="50"></rect>
+    <rect x="18" y="18" width="34" height="34" fill="#FAF6F0"></rect>
+    <rect x="26" y="26" width="18" height="18"></rect>
+    <rect x="140" y="10" width="50" height="50"></rect>
+    <rect x="148" y="18" width="34" height="34" fill="#FAF6F0"></rect>
+    <rect x="156" y="26" width="18" height="18"></rect>
+    <rect x="10" y="140" width="50" height="50"></rect>
+    <rect x="18" y="148" width="34" height="34" fill="#FAF6F0"></rect>
+    <rect x="26" y="156" width="18" height="18"></rect>
+    
+    <g>
+      <rect x="70" y="14" width="8" height="8"></rect><rect x="86" y="14" width="8" height="8"></rect><rect x="110" y="14" width="8" height="8"></rect><rect x="126" y="14" width="8" height="8"></rect>
+      <rect x="78" y="30" width="8" height="8"></rect><rect x="102" y="30" width="8" height="8"></rect><rect x="118" y="30" width="8" height="8"></rect>
+      <rect x="70" y="46" width="8" height="8"></rect><rect x="94" y="46" width="8" height="8"></rect><rect x="118" y="46" width="8" height="8"></rect><rect x="134" y="46" width="8" height="8"></rect>
+      <rect x="14" y="70" width="8" height="8"></rect><rect x="30" y="70" width="8" height="8"></rect><rect x="54" y="70" width="8" height="8"></rect><rect x="70" y="70" width="8" height="8"></rect><rect x="86" y="70" width="8" height="8"></rect><rect x="110" y="70" width="8" height="8"></rect><rect x="134" y="70" width="8" height="8"></rect><rect x="158" y="70" width="8" height="8"></rect><rect x="174" y="70" width="8" height="8"></rect>
+      <rect x="22" y="86" width="8" height="8"></rect><rect x="46" y="86" width="8" height="8"></rect><rect x="78" y="86" width="8" height="8"></rect><rect x="102" y="86" width="8" height="8"></rect><rect x="118" y="86" width="8" height="8"></rect><rect x="142" y="86" width="8" height="8"></rect><rect x="166" y="86" width="8" height="8"></rect>
+      <rect x="14" y="102" width="8" height="8"></rect><rect x="38" y="102" width="8" height="8"></rect><rect x="62" y="102" width="8" height="8"></rect><rect x="86" y="102" width="8" height="8"></rect><rect x="110" y="102" width="8" height="8"></rect><rect x="134" y="102" width="8" height="8"></rect><rect x="158" y="102" width="8" height="8"></rect><rect x="182" y="102" width="8" height="8"></rect>
+      <rect x="22" y="118" width="8" height="8"></rect><rect x="54" y="118" width="8" height="8"></rect><rect x="70" y="118" width="8" height="8"></rect><rect x="94" y="118" width="8" height="8"></rect><rect x="118" y="118" width="8" height="8"></rect><rect x="150" y="118" width="8" height="8"></rect><rect x="174" y="118" width="8" height="8"></rect>
+      <rect x="30" y="134" width="8" height="8"></rect><rect x="46" y="134" width="8" height="8"></rect><rect x="86" y="134" width="8" height="8"></rect><rect x="110" y="134" width="8" height="8"></rect><rect x="142" y="134" width="8" height="8"></rect><rect x="166" y="134" width="8" height="8"></rect>
+      <rect x="70" y="150" width="8" height="8"></rect><rect x="94" y="150" width="8" height="8"></rect><rect x="126" y="150" width="8" height="8"></rect><rect x="158" y="150" width="8" height="8"></rect><rect x="182" y="150" width="8" height="8"></rect>
+      <rect x="78" y="166" width="8" height="8"></rect><rect x="102" y="166" width="8" height="8"></rect><rect x="134" y="166" width="8" height="8"></rect><rect x="174" y="166" width="8" height="8"></rect>
+      <rect x="70" y="182" width="8" height="8"></rect><rect x="94" y="182" width="8" height="8"></rect><rect x="118" y="182" width="8" height="8"></rect><rect x="150" y="182" width="8" height="8"></rect>
+    </g>
+    
+    <rect x="84" y="84" width="32" height="32" rx="6" fill="#D97706"></rect>
+    <path d="M93 106 C 93 99, 97 95, 100 95 C 103 95, 107 99, 107 106 Z" fill="#FAF6F0"></path>
+    <line x1="91" y1="108" x2="109" y2="108" stroke="#FAF6F0" stroke-width="1.4" stroke-linecap="round"></line>
+  </g>
+</svg>

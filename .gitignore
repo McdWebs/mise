@@ -1,0 +1,39 @@
+# Design handoff — large reference bundle; keep out of git
+design_handoff_servo/
+
+# Local build / agent prompts (not for the repo)
+prompt.md
+
+# Dependencies
+node_modules/
+
+# Builds & caches
+dist/
+dist-ssr/
+build/
+.turbo/
+.cache/
+*.tsbuildinfo
+
+# Environment & secrets (does not match *.example files)
+.env
+.env.local
+.env.*.local
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS & editors
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.sw?
+
+# Test / coverage
+coverage/
