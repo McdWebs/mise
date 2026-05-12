@@ -1,11 +1,19 @@
-// Hand-written until `supabase gen types typescript` can be run against a live project.
-// Keep in sync with supabase/migrations/0001_init.sql.
+// Hand-written to match supabase-js v2 expected shape.
+// Replace with `supabase gen types typescript` output once project is linked.
 
 export type OrderStage = 'received' | 'cooking' | 'ready' | 'picked_up' | 'cancelled'
 export type UserRole = 'guest' | 'owner' | 'super_admin'
 export type MemberRole = 'owner' | 'staff'
 export type AssistanceKind = 'call_server' | 'other'
 export type AssistanceStatus = 'open' | 'resolved'
+
+type Rel = {
+  foreignKeyName: string
+  columns: string[]
+  isOneToOne: boolean
+  referencedRelation: string
+  referencedColumns: string[]
+}
 
 export interface Database {
   public: {
@@ -25,9 +33,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['users']['Insert']>
+        Update: {
+          id?: string
+          email?: string
+          role?: UserRole
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: Rel[]
       }
-
       restaurants: {
         Row: {
           id: string
@@ -49,9 +63,18 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['restaurants']['Insert']>
+        Update: {
+          id?: string
+          slug?: string
+          name?: string
+          tagline?: string | null
+          currency?: string
+          accepting_orders?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: Rel[]
       }
-
       restaurant_members: {
         Row: {
           user_id: string
@@ -63,9 +86,13 @@ export interface Database {
           restaurant_id: string
           role?: MemberRole
         }
-        Update: Partial<Database['public']['Tables']['restaurant_members']['Insert']>
+        Update: {
+          user_id?: string
+          restaurant_id?: string
+          role?: MemberRole
+        }
+        Relationships: Rel[]
       }
-
       menu_categories: {
         Row: {
           id: string
@@ -83,9 +110,16 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['menu_categories']['Insert']>
+        Update: {
+          id?: string
+          restaurant_id?: string
+          name?: string
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: Rel[]
       }
-
       menu_items: {
         Row: {
           id: string
@@ -113,9 +147,21 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['menu_items']['Insert']>
+        Update: {
+          id?: string
+          category_id?: string
+          name?: string
+          description?: string | null
+          price_cents?: number
+          available?: boolean
+          tags?: string[]
+          image_url?: string | null
+          sort_order?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: Rel[]
       }
-
       orders: {
         Row: {
           id: string
@@ -135,9 +181,17 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['orders']['Insert']>
+        Update: {
+          id?: string
+          restaurant_id?: string
+          table_label?: string
+          stage?: OrderStage
+          subtotal_cents?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: Rel[]
       }
-
       order_items: {
         Row: {
           id: string
@@ -157,9 +211,17 @@ export interface Database {
           unit_price_cents: number
           created_at?: string
         }
-        Update: Partial<Database['public']['Tables']['order_items']['Insert']>
+        Update: {
+          id?: string
+          order_id?: string
+          menu_item_id?: string
+          quantity?: number
+          modifiers?: string[]
+          unit_price_cents?: number
+          created_at?: string
+        }
+        Relationships: Rel[]
       }
-
       assistance_requests: {
         Row: {
           id: string
@@ -179,9 +241,17 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['assistance_requests']['Insert']>
+        Update: {
+          id?: string
+          restaurant_id?: string
+          table_label?: string
+          kind?: AssistanceKind
+          status?: AssistanceStatus
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: Rel[]
       }
-
       assistant_conversations: {
         Row: {
           id: string
@@ -201,9 +271,28 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Update: Partial<Database['public']['Tables']['assistant_conversations']['Insert']>
+        Update: {
+          id?: string
+          restaurant_id?: string
+          table_label?: string
+          messages_jsonb?: AssistantMessage[]
+          escalated?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: Rel[]
       }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
+    Enums: {
+      order_stage: OrderStage
+      user_role: UserRole
+      member_role: MemberRole
+      assistance_kind: AssistanceKind
+      assistance_status: AssistanceStatus
+    }
+    CompositeTypes: Record<string, never>
   }
 }
 

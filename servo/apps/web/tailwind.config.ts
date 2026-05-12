@@ -1,5 +1,6 @@
 import type { Config } from 'tailwindcss'
 import servoPreset from '@servo/tokens'
+import plugin from 'tailwindcss/plugin'
 
 export default {
   presets: [servoPreset as Config],
@@ -11,5 +12,16 @@ export default {
   theme: {
     extend: {},
   },
-  plugins: [],
+  plugins: [
+    // scrollbar-none utility
+    plugin(({ addUtilities }) => {
+      addUtilities({
+        '.scrollbar-none': {
+          '-ms-overflow-style': 'none',
+          'scrollbar-width': 'none',
+          '&::-webkit-scrollbar': { display: 'none' },
+        },
+      })
+    }),
+  ],
 } satisfies Config
