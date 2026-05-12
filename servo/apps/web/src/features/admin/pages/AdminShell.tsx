@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut } from 'lucide-react'
+import { LogOut, MonitorPlay } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useSession } from '@/features/auth/hooks/useSession'
 import { useAdminRestaurant } from '../hooks/useAdminRestaurant'
@@ -105,8 +105,17 @@ export default function AdminShell() {
         </div>
 
         {/* Footer */}
-        <div className="mt-auto px-4 py-4 border-t border-paper-3">
-          <div className="text-[12px] text-ink-6 mb-2 truncate">{user?.email}</div>
+        <div className="mt-auto px-4 py-4 border-t border-paper-3 space-y-2">
+          <a
+            href="/kitchen"
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-2 text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover"
+          >
+            <MonitorPlay size={14} />
+            Kitchen display
+          </a>
+          <div className="text-[12px] text-ink-6 truncate">{user?.email}</div>
           <button
             onClick={signOut}
             className="flex items-center gap-2 text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover"

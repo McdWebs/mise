@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useSuperAdmin } from '../hooks/useSuperAdmin'
 
 function Spinner() {
@@ -11,9 +11,10 @@ function Spinner() {
 
 export function SuperAdminGuard({ children }: { children: React.ReactNode }) {
   const { isSuperAdmin, loading, user } = useSuperAdmin()
+  const location = useLocation()
 
   if (loading) return <Spinner />
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/platform/login" replace state={{ from: location.pathname }} />
   if (!isSuperAdmin) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-paper">

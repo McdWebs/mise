@@ -2,10 +2,10 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 
-export default function LoginPage() {
+export default function PlatformLoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string })?.from ?? '/admin'
+  const from = (location.state as { from?: string })?.from ?? '/platform'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -49,7 +49,7 @@ export default function LoginPage() {
         </div>
 
         <h1 className="font-display text-h1 text-paper font-optical mb-1.5">Sign in</h1>
-        <p className="text-body-sm text-ink-7 mb-8">Owner and staff access.</p>
+        <p className="text-body-sm text-ink-7 mb-8">Platform admin access.</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -60,7 +60,7 @@ export default function LoginPage() {
               onChange={e => setEmail(e.target.value)}
               required
               autoComplete="email"
-              placeholder="you@bistro.co"
+              placeholder="ops@servo.app"
               className="w-full h-10 rounded-2 bg-ink-2 border border-[1.5px] border-ink-3 text-paper placeholder:text-ink-6 px-3 text-body focus-visible:outline-none focus-visible:border-saffron focus-visible:border-2 transition-[border-color] duration-standard"
             />
           </div>

@@ -10,6 +10,7 @@ const LoginPage = lazy(() => import('./features/auth/pages/LoginPage'))
 const KitchenPage = lazy(() => import('./features/kitchen/pages/KitchenPage'))
 const AdminShell = lazy(() => import('./features/admin/pages/AdminShell'))
 const PlatformPage = lazy(() => import('./features/platform/pages/PlatformPage'))
+const PlatformLoginPage = lazy(() => import('./features/platform/pages/PlatformLoginPage'))
 
 function Spinner() {
   return (
@@ -29,16 +30,10 @@ export default function App() {
 
         {/* Auth */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/platform/login" element={<PlatformLoginPage />} />
 
-        {/* Kitchen */}
-        <Route
-          path="/kitchen"
-          element={
-            <AuthGuard>
-              <KitchenPage />
-            </AuthGuard>
-          }
-        />
+        {/* Kitchen — no login, opened from admin */}
+        <Route path="/kitchen" element={<KitchenPage />} />
 
         {/* Admin */}
         <Route
