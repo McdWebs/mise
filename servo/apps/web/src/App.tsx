@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthGuard } from './features/auth/components/AuthGuard'
+import { SuperAdminGuard } from './features/platform/components/SuperAdminGuard'
 
 const TokensPage = lazy(() => import('./pages/dev/TokensPage'))
 const GuestMenuPage = lazy(() => import('./features/guest/pages/GuestMenuPage'))
@@ -8,6 +9,7 @@ const OrderStatusPage = lazy(() => import('./features/guest/pages/OrderStatusPag
 const LoginPage = lazy(() => import('./features/auth/pages/LoginPage'))
 const KitchenPage = lazy(() => import('./features/kitchen/pages/KitchenPage'))
 const AdminShell = lazy(() => import('./features/admin/pages/AdminShell'))
+const PlatformPage = lazy(() => import('./features/platform/pages/PlatformPage'))
 
 function Spinner() {
   return (
@@ -45,6 +47,16 @@ export default function App() {
             <AuthGuard>
               <AdminShell />
             </AuthGuard>
+          }
+        />
+
+        {/* Platform (super-admin only) */}
+        <Route
+          path="/platform"
+          element={
+            <SuperAdminGuard>
+              <PlatformPage />
+            </SuperAdminGuard>
           }
         />
 
