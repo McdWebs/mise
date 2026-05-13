@@ -21,7 +21,7 @@ export function CategoryNav({ categories, activeId, onPick }: CategoryNavProps) 
   return (
     <div
       ref={ref}
-      className="flex gap-1.5 px-4 py-3 overflow-x-auto border-b border-paper-3 bg-paper sticky top-[73px] z-[4] scrollbar-none"
+      className="flex gap-1.5 px-4 py-3 overflow-x-auto border-b border-paper-3 sticky top-[73px] z-[4] scrollbar-none"
       style={{ WebkitOverflowScrolling: 'touch' }}
     >
       {categories.map(cat => (
