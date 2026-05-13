@@ -121,7 +121,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Relationships: Rel[]
+        Relationships: [
+          {
+            foreignKeyName: 'menu_items_category_id_fkey'
+            columns: ['id']
+            isOneToOne: false
+            referencedRelation: 'menu_items'
+            referencedColumns: ['category_id']
+          },
+        ]
       }
       menu_items: {
         Row: {
@@ -166,7 +174,15 @@ export interface Database {
           created_at?: string
           updated_at?: string
         }
-        Relationships: Rel[]
+        Relationships: [
+          {
+            foreignKeyName: 'menu_items_category_id_fkey'
+            columns: ['category_id']
+            isOneToOne: false
+            referencedRelation: 'menu_categories'
+            referencedColumns: ['id']
+          },
+        ]
       }
       restaurant_plans: {
         Row: {
@@ -539,7 +555,15 @@ export interface Database {
       }
     }
     Views: Record<string, never>
-    Functions: Record<string, never>
+    Functions: {
+      mark_table_occupied: {
+        Args: {
+          p_table_id: string
+          p_restaurant_id: string
+        }
+        Returns: undefined
+      }
+    }
     Enums: {
       order_stage: OrderStage
       user_role: UserRole
