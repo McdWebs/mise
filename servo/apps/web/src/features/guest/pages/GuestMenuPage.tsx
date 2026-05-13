@@ -356,7 +356,7 @@ export default function GuestMenuPage() {
         onClick={handleCallWaiter}
         disabled={waiterCalled}
         aria-label="Call a waiter"
-        className="fixed bottom-[92px] z-[7] border-2 border-ink w-[52px] h-[52px] rounded-full bg-paper text-ink flex items-center justify-center shadow-1 hover:bg-paper-2 transition-colors duration-hover disabled:opacity-60"
+        className="fixed bottom-[48px] z-[7] border-2 border-ink w-[52px] h-[52px] rounded-full bg-paper text-ink flex items-center justify-center shadow-1 hover:bg-paper-2 transition-colors duration-hover disabled:opacity-60"
         style={{ left: 'max(20px, calc(50vw - 210px + 20px))' }}
       >
         {waiterCalled ? <Check size={20} /> : <BellRing size={20} />}
@@ -366,7 +366,7 @@ export default function GuestMenuPage() {
       <button
         onClick={() => setAiOpen(true)}
         aria-label="Open menu assistant"
-        className="fixed bottom-[92px] z-[7] border-2 border-paper w-[52px] h-[52px] rounded-full bg-ink text-paper flex items-center justify-center shadow-1 hover:bg-ink-2 transition-colors duration-hover"
+        className="fixed bottom-[48px] z-[7] border-2 border-paper w-[52px] h-[52px] rounded-full bg-ink text-paper flex items-center justify-center shadow-1 hover:bg-ink-2 transition-colors duration-hover"
         style={{ right: 'max(20px, calc(50vw - 210px + 20px))' }}
       >
         <MessageCircle size={22} />
