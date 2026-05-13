@@ -12,6 +12,11 @@ const AdminShell = lazy(() => import('./features/admin/pages/AdminShell'))
 const PlatformPage = lazy(() => import('./features/platform/pages/PlatformPage'))
 const PlatformLoginPage = lazy(() => import('./features/platform/pages/PlatformLoginPage'))
 
+const TABLECLOTH_BG = {
+  backgroundImage: 'url(/assets/pattern-tablecloth.svg)',
+  backgroundRepeat: 'repeat' as const,
+}
+
 function Spinner() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-paper">
@@ -62,7 +67,10 @@ export default function App() {
         <Route
           path="/"
           element={
-            <div className="flex min-h-dvh items-center justify-center bg-paper">
+            <div
+              className="flex min-h-dvh items-center justify-center bg-paper"
+              style={TABLECLOTH_BG}
+            >
               <p className="font-display text-h1 text-ink font-optical">Servo</p>
             </div>
           }
