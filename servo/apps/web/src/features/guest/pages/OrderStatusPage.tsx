@@ -2,6 +2,8 @@ import { useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useOrder } from '../hooks/useOrder'
+import { useRestaurant } from '../hooks/useRestaurant'
+import { useTableOrders } from '../hooks/useTableOrders'
 import { OrderStatus } from '../components/OrderStatus'
 import type { OrderItem } from '@servo/types'
 
@@ -10,11 +12,13 @@ interface OrderItemWithName extends OrderItem {
 }
 
 export default function OrderStatusPage() {
-  const { orderId } = useParams<{ orderId: string }>()
+  const { slug, orderId } = useParams<{ slug: string; orderId: string }>()
   const [searchParams] = useSearchParams()
   const tableLabel = searchParams.get('table') ?? 'T 1'
 
   const { order, isLoading: loadingOrder } = useOrder(orderId)
+  const { data: restaurant } = useRestaurant(slug ?? '')
+  const tableOrders = useTableOrders(restaurant?.id, tableLabel)
 
   // Fetch order items with item names joined
   const { data: items = [] } = useQuery<OrderItemWithName[]>({
@@ -54,7 +58,14 @@ export default function OrderStatusPage() {
 
   return (
     <div className="w-full max-w-[420px] mx-auto border-x border-paper-3 min-h-dvh">
-      <OrderStatus order={order} items={items} tableLabel={tableLabel} />
+      <OrderStatus
+        order={order}
+        items={items}
+        tableLabel={tableLabel}
+        slug={slug ?? ''}
+        currency={restaurant?.currency ?? 'USD'}
+        tableOrders={tableOrders.data ?? []}
+      />
     </div>
   )
 }

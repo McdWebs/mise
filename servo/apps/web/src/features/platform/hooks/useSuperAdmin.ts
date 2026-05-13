@@ -1,14 +1,27 @@
+import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useSession } from '@/features/auth/hooks/useSession'
+import type { User } from '@supabase/supabase-js'
+import { supabasePlatform } from '@/lib/supabasePlatform'
+
+function usePlatformSession() {
+  const [user, setUser] = useState<User | null | undefined>(undefined)
+
+  useEffect(() => {
+    supabasePlatform.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null))
+    const { data: { subscription } } = supabasePlatform.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null))
+    return () => subscription.unsubscribe()
+  }, [])
+
+  return { user, loading: user === undefined }
+}
 
 export function useSuperAdmin() {
-  const { user, loading: sessionLoading } = useSession()
+  const { user, loading: sessionLoading } = usePlatformSession()
 
   const { data: role, isLoading: roleLoading } = useQuery<string | null>({
-    queryKey: ['user-role', user?.id],
+    queryKey: ['platform-user-role', user?.id],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data } = await supabasePlatform
         .from('users')
         .select('role')
         .eq('id', user!.id)

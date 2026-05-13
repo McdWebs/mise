@@ -9,8 +9,9 @@ import { SettingsPage } from './SettingsPage'
 import { OrdersPage } from './OrdersPage'
 import { AssistantPage } from './AssistantPage'
 import { PlansPage } from './PlansPage'
+import { TablesPage } from './TablesPage'
 
-type AdminPage = 'overview' | 'menu' | 'settings' | 'orders' | 'assistant' | 'plans'
+type AdminPage = 'overview' | 'menu' | 'settings' | 'orders' | 'assistant' | 'plans' | 'tables'
 
 const NAV: { id: AdminPage; label: string }[] = [
   { id: 'overview',  label: 'Overview'  },
@@ -21,6 +22,7 @@ const NAV: { id: AdminPage; label: string }[] = [
 
 const NAV_INSIGHTS: { id: AdminPage; label: string }[] = [
   { id: 'orders',    label: 'Orders'    },
+  { id: 'tables',    label: 'Tables'    },
   { id: 'assistant', label: 'Assistant' },
 ]
 
@@ -139,6 +141,7 @@ export default function AdminShell() {
           <Route path="plans" element={<PlansPage restaurant={restaurant} />} />
           <Route path="settings" element={<SettingsPage restaurant={restaurant} />} />
           <Route path="orders" element={<OrdersPage restaurant={restaurant} />} />
+          <Route path="tables" element={<TablesPage restaurant={restaurant} />} />
           <Route path="assistant" element={<AssistantPage restaurant={restaurant} />} />
           <Route path="*" element={<Navigate to="/admin/overview" replace />} />
         </Routes>

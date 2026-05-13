@@ -19,9 +19,11 @@ const ADVANCE_LABEL: Partial<Record<OrderStage, string>> = {
 interface TicketDrawerProps {
   order: KitchenOrder | null
   onClose: () => void
+  applyOrderStage: (orderId: string, stage: OrderStage) => void
+  restoreKitchenOrder: (order: KitchenOrder) => void
 }
 
-export function TicketDrawer({ order, onClose }: TicketDrawerProps) {
+export function TicketDrawer({ order, onClose, applyOrderStage, restoreKitchenOrder }: TicketDrawerProps) {
   const [saving, setSaving] = useState(false)
   const open = order !== null
 
@@ -46,17 +48,29 @@ export function TicketDrawer({ order, onClose }: TicketDrawerProps) {
     if (!order) return
     const next = NEXT_STAGE[order.stage as OrderStage]
     if (!next) return
+    const prevStage = order.stage as OrderStage
     setSaving(true)
-    await supabase.from('orders').update({ stage: next }).eq('id', order.id)
+    applyOrderStage(order.id, next)
+    const { error } = await supabase.from('orders').update({ stage: next }).eq('id', order.id)
     setSaving(false)
+    if (error) {
+      applyOrderStage(order.id, prevStage)
+      return
+    }
     onClose()
   }
 
   async function cancel() {
     if (!order) return
+    const snapshot = { ...order }
     setSaving(true)
-    await supabase.from('orders').update({ stage: 'cancelled' }).eq('id', order.id)
+    applyOrderStage(order.id, 'cancelled')
+    const { error } = await supabase.from('orders').update({ stage: 'cancelled' }).eq('id', order.id)
     setSaving(false)
+    if (error) {
+      restoreKitchenOrder(snapshot)
+      return
+    }
     onClose()
   }
 

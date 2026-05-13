@@ -1,14 +1,19 @@
 import { useState } from 'react'
-import { Bell, CheckCircle2, Loader2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Bell, CheckCircle2, Loader2, PlusCircle } from 'lucide-react'
 import type { Order, OrderItem } from '@servo/types'
 import type { OrderStage } from '@servo/types'
 import { formatPriceExact } from '../utils/formatPrice'
 import { supabase } from '@/lib/supabase'
+import type { TableOrder } from '../hooks/useTableOrders'
 
 interface OrderStatusProps {
   order: Order
   items: (OrderItem & { itemName: string })[]
   tableLabel: string
+  slug: string
+  currency: string
+  tableOrders: TableOrder[]
 }
 
 const STAGE_STEPS: { stage: OrderStage; label: string }[] = [
@@ -25,7 +30,15 @@ const STAGE_HEADLINE: Partial<Record<OrderStage, string>> = {
   cancelled: 'Order cancelled',
 }
 
-export function OrderStatus({ order, items, tableLabel }: OrderStatusProps) {
+const STAGE_BADGE: Record<OrderStage, { label: string; color: string }> = {
+  received:  { label: 'Received',  color: 'bg-paper-3 text-ink-5' },
+  cooking:   { label: 'Cooking',   color: 'bg-saffron-wash text-saffron-3' },
+  ready:     { label: 'Ready',     color: 'bg-herb-wash text-herb' },
+  picked_up: { label: 'Picked up', color: 'bg-paper-3 text-ink-5' },
+  cancelled: { label: 'Cancelled', color: 'bg-ember-wash text-ember' },
+}
+
+export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrders }: OrderStatusProps) {
   const [helpSent, setHelpSent] = useState(false)
   const [helpLoading, setHelpLoading] = useState(false)
 
@@ -135,7 +148,7 @@ export function OrderStatus({ order, items, tableLabel }: OrderStatusProps) {
       </div>
 
       {/* Call server */}
-      <div className="flex gap-3 items-center p-4 bg-paper border border-paper-3 rounded-3">
+      <div className="flex gap-3 items-center p-4 bg-paper border border-paper-3 rounded-3 mb-5">
         <div className="w-10 h-10 rounded-full bg-paper-2 flex items-center justify-center text-ink shrink-0">
           {helpSent ? <CheckCircle2 size={20} className="text-herb" /> : <Bell size={20} />}
         </div>
@@ -160,6 +173,66 @@ export function OrderStatus({ order, items, tableLabel }: OrderStatusProps) {
           </button>
         )}
       </div>
+
+      {/* Order more */}
+      {slug && tableLabel && (
+        <Link
+          to={`/r/${slug}?table=${encodeURIComponent(tableLabel)}`}
+          className="flex items-center justify-center gap-2 w-full h-12 rounded-3 bg-ink text-paper text-[15px] font-semibold mb-7 hover:opacity-90 transition-opacity duration-hover"
+        >
+          <PlusCircle size={17} />
+          Order more
+        </Link>
+      )}
+
+      {/* All orders at this table */}
+      {tableOrders.length > 0 && (
+        <div>
+          <h2 className="font-display text-[20px] font-[500] text-ink tracking-[-0.01em] font-optical mb-3">
+            All orders at {tableLabel}
+          </h2>
+          <div className="space-y-3">
+            {tableOrders.map(o => {
+              const isCurrent = o.id === order.id
+              const badge = STAGE_BADGE[o.stage]
+              return (
+                <div
+                  key={o.id}
+                  className={`bg-paper border rounded-3 overflow-hidden ${isCurrent ? 'border-saffron' : 'border-paper-3'}`}
+                >
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-paper-3">
+                    <span className="font-mono text-[12px] text-ink-6 tabular-nums">
+                      #{o.id.slice(0, 8).toUpperCase()}
+                      {isCurrent && <span className="ml-2 text-saffron-3 font-sans font-medium">This order</span>}
+                    </span>
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-pill ${badge.color}`}>
+                      {badge.label}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-paper-3">
+                    {o.items.map((item, i) => (
+                      <div key={i} className="flex gap-3 px-4 py-2.5">
+                        <span className="font-mono text-[13px] font-semibold text-ink-6 w-6 tabular-nums shrink-0">
+                          {item.quantity}×
+                        </span>
+                        <span className="flex-1 text-[13px] text-ink">{item.itemName}</span>
+                        <span className="font-mono text-[13px] text-ink tabular-nums">
+                          {formatPriceExact(item.unit_price_cents * item.quantity, currency)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-end px-4 py-2.5 border-t border-paper-3">
+                    <span className="font-mono text-[14px] font-bold text-ink tabular-nums">
+                      {formatPriceExact(o.subtotal_cents, currency)}
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

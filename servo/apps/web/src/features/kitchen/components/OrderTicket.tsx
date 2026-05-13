@@ -20,17 +20,22 @@ interface OrderTicketProps {
   pulsing: boolean
   tick: number
   onClick: () => void
+  onDragStart?: (e: React.DragEvent) => void
 }
 
-export function OrderTicket({ order, pulsing, tick: _tick, onClick }: OrderTicketProps) {
+export function OrderTicket({ order, pulsing, tick: _tick, onClick, onDragStart }: OrderTicketProps) {
   const stage = order.stage as OrderStage
   const elapsed = elapsedSeconds(order.updated_at)
   const tc = timerClass(stage, elapsed)
+  const dragging = Boolean(onDragStart)
 
   return (
     <button
+      type="button"
+      draggable={dragging}
+      onDragStart={onDragStart}
       onClick={onClick}
-      className="relative w-full text-left bg-paper overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-saffron"
+      className={`relative w-full text-left bg-paper overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-saffron ${dragging ? 'cursor-grab active:cursor-grabbing' : ''}`}
       style={{ borderLeft: `3px solid ${RAIL_COLOR[stage] ?? '#6A5E51'}` }}
     >
       {/* New-order pulse overlay */}

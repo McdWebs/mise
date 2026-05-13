@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { LogOut, BellRing } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { OrderingToggle } from './OrderingToggle'
 import type { KitchenOrder } from '../hooks/useKitchenOrders'
+
+type KitchenView = 'orders' | 'tables'
 
 function liveClock(): string {
   const now = new Date()
@@ -14,9 +16,20 @@ interface KitchenTopBarProps {
   restaurantName: string
   accepting: boolean
   orders: KitchenOrder[]
+  view: KitchenView
+  waiterCallCount: number
+  onViewChange: (v: KitchenView) => void
 }
 
-export function KitchenTopBar({ restaurantId, restaurantName, accepting, orders }: KitchenTopBarProps) {
+export function KitchenTopBar({
+  restaurantId,
+  restaurantName,
+  accepting,
+  orders,
+  view,
+  waiterCallCount,
+  onViewChange,
+}: KitchenTopBarProps) {
   const [clock, setClock] = useState(liveClock)
 
   useEffect(() => {
@@ -55,24 +68,67 @@ export function KitchenTopBar({ restaurantId, restaurantName, accepting, orders 
 
       {/* Venue */}
       <span className="text-body-sm text-ink-7 shrink-0">
-        {restaurantName} · Kitchen
+        {restaurantName}
       </span>
+
+      <div className="w-px h-5 bg-ink-3" />
+
+      {/* View toggle */}
+      <div className="flex items-center gap-1 bg-ink-3 rounded-pill p-0.5 shrink-0">
+        <button
+          onClick={() => onViewChange('orders')}
+          className={`px-3 py-0.5 rounded-pill text-[12px] font-medium transition-colors duration-hover ${
+            view === 'orders'
+              ? 'bg-paper text-ink'
+              : 'text-ink-6 hover:text-paper'
+          }`}
+        >
+          Orders
+        </button>
+        <button
+          onClick={() => onViewChange('tables')}
+          className={`relative px-3 py-0.5 rounded-pill text-[12px] font-medium transition-colors duration-hover ${
+            view === 'tables'
+              ? 'bg-paper text-ink'
+              : 'text-ink-6 hover:text-paper'
+          }`}
+        >
+          Tables
+          {waiterCallCount > 0 && (
+            <span className="absolute -top-1 -right-1 min-w-[16px] h-4 bg-ember text-paper text-[9px] font-bold rounded-full flex items-center justify-center px-1 leading-none">
+              {waiterCallCount}
+            </span>
+          )}
+        </button>
+      </div>
 
       {/* Spacer */}
       <div className="flex-1" />
 
-      {/* Lane stats */}
-      <div className="flex items-center gap-4 shrink-0">
-        <span className="font-mono text-mono text-saffron tabular-nums">
-          {counts.received}
-        </span>
-        <span className="font-mono text-mono text-honey tabular-nums">
-          {counts.cooking}
-        </span>
-        <span className="font-mono text-mono text-herb tabular-nums">
-          {counts.ready}
-        </span>
-      </div>
+      {/* Lane stats (only in orders view) */}
+      {view === 'orders' && (
+        <div className="flex items-center gap-4 shrink-0">
+          <span className="font-mono text-mono text-saffron tabular-nums">
+            {counts.received}
+          </span>
+          <span className="font-mono text-mono text-honey tabular-nums">
+            {counts.cooking}
+          </span>
+          <span className="font-mono text-mono text-herb tabular-nums">
+            {counts.ready}
+          </span>
+        </div>
+      )}
+
+      {/* Waiter call count (only in tables view) */}
+      {view === 'tables' && waiterCallCount > 0 && (
+        <div className="flex items-center gap-1.5 text-ember shrink-0">
+          <BellRing size={13} className="animate-pulse" />
+          <span className="font-mono text-[12px] font-semibold tabular-nums">
+            {waiterCallCount}
+          </span>
+        </div>
+      )}
 
       <div className="w-px h-5 bg-ink-3" />
 

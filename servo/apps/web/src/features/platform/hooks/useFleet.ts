@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { supabasePlatform as supabase } from '@/lib/supabasePlatform'
 
 export interface FleetTenant {
   id: string

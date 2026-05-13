@@ -13,7 +13,7 @@ export function TableChip({ label, variant = 'dark' }: TableChipProps) {
     )
   }
   return (
-    <span className="inline-flex items-center px-2.5 py-[5px] bg-ink text-paper rounded-pill font-mono text-[12px] font-semibold whitespace-nowrap">
+    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink font-mono text-[12px] font-semibold text-paper whitespace-nowrap">
       {label}
     </span>
   )

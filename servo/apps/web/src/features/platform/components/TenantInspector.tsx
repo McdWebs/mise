@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { supabasePlatform as supabase } from '@/lib/supabasePlatform'
 import { useQueryClient } from '@tanstack/react-query'
 import type { FleetTenant } from '../hooks/useFleet'
 

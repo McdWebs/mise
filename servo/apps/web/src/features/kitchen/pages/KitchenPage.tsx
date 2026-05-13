@@ -3,10 +3,14 @@ import { supabase } from '@/lib/supabase'
 import { useSession } from '@/features/auth/hooks/useSession'
 import { useRestaurantMembership } from '../hooks/useRestaurantMembership'
 import { useKitchenOrders } from '../hooks/useKitchenOrders'
+import { useWaiterCalls } from '../hooks/useWaiterCalls'
 import { KitchenTopBar } from '../components/KitchenTopBar'
 import { LaneColumn } from '../components/LaneColumn'
 import { TicketDrawer } from '../components/TicketDrawer'
-import type { KitchenOrder } from '../hooks/useKitchenOrders'
+import { TableFloor } from '../components/TableFloor'
+import type { OrderStage } from '@servo/types'
+
+type KitchenView = 'orders' | 'tables'
 
 const STAGES = ['received', 'cooking', 'ready', 'picked_up'] as const
 
@@ -22,15 +26,16 @@ export default function KitchenPage() {
   const { user } = useSession()
   const { data: memberships, isLoading: memberLoading } = useRestaurantMembership(user?.id)
 
-  // Use first membership
   const membership = memberships?.[0]
   const restaurant = membership?.restaurants
 
-  const { orders, pulsingId, loading: ordersLoading } = useKitchenOrders(restaurant?.id)
+  const { orders, pulsingId, loading: ordersLoading, applyOrderStage, restoreKitchenOrder } =
+    useKitchenOrders(restaurant?.id)
+  const { calls, acknowledgeCall } = useWaiterCalls(restaurant?.id)
 
-  // Accepting orders — kept in sync via realtime on restaurants table
   const [accepting, setAccepting] = useState<boolean>(true)
   const acceptingRef = useRef(accepting)
+  const [view, setView] = useState<KitchenView>('orders')
 
   useEffect(() => {
     if (restaurant?.accepting_orders !== undefined) {
@@ -39,19 +44,13 @@ export default function KitchenPage() {
     }
   }, [restaurant?.accepting_orders])
 
-  // Realtime: sync accepting_orders from other sessions
   useEffect(() => {
     if (!restaurant?.id) return
     const channel = supabase
       .channel(`restaurant-${restaurant.id}`)
       .on(
         'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'restaurants',
-          filter: `id=eq.${restaurant.id}`,
-        },
+        { event: 'UPDATE', schema: 'public', table: 'restaurants', filter: `id=eq.${restaurant.id}` },
         payload => {
           const row = payload.new as { accepting_orders: boolean }
           setAccepting(row.accepting_orders)
@@ -61,15 +60,23 @@ export default function KitchenPage() {
     return () => { supabase.removeChannel(channel) }
   }, [restaurant?.id])
 
-  // 1-second tick for timers
   const [tick, setTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 1000)
     return () => clearInterval(id)
   }, [])
 
-  // Drawer
-  const [selected, setSelected] = useState<KitchenOrder | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selectedOrder = selectedId ? orders.find(o => o.id === selectedId) ?? null : null
+
+  async function moveOrderToStage(orderId: string, targetStage: (typeof STAGES)[number]) {
+    const order = orders.find(o => o.id === orderId)
+    if (!order || order.stage === targetStage) return
+    const prevStage = order.stage as OrderStage
+    applyOrderStage(orderId, targetStage)
+    const { error } = await supabase.from('orders').update({ stage: targetStage }).eq('id', orderId)
+    if (error) applyOrderStage(orderId, prevStage)
+  }
 
   if (memberLoading || ordersLoading) return <Spinner />
 
@@ -90,26 +97,43 @@ export default function KitchenPage() {
         restaurantName={restaurant.name}
         accepting={accepting}
         orders={orders}
+        view={view}
+        waiterCallCount={calls.length}
+        onViewChange={setView}
       />
 
-      {/* Lane grid */}
-      <div className="flex-1 grid overflow-hidden" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-        {STAGES.map(stage => (
-          <LaneColumn
-            key={stage}
-            stage={stage}
-            orders={byStage(stage)}
-            pulsingId={pulsingId}
-            tick={tick}
-            onSelect={setSelected}
+      {view === 'orders' ? (
+        <>
+          <div className="flex-1 grid min-h-0 overflow-hidden" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+            {STAGES.map(stage => (
+              <LaneColumn
+                key={stage}
+                stage={stage}
+                orders={byStage(stage)}
+                pulsingId={pulsingId}
+                tick={tick}
+                onSelect={o => setSelectedId(o.id)}
+                onDropOrder={(orderId, targetStage) => {
+                  void moveOrderToStage(orderId, targetStage as (typeof STAGES)[number])
+                }}
+              />
+            ))}
+          </div>
+
+          <TicketDrawer
+            order={selectedOrder}
+            onClose={() => setSelectedId(null)}
+            applyOrderStage={applyOrderStage}
+            restoreKitchenOrder={restoreKitchenOrder}
           />
-        ))}
-      </div>
-
-      <TicketDrawer
-        order={selected}
-        onClose={() => setSelected(null)}
-      />
+        </>
+      ) : (
+        <TableFloor
+          restaurantId={restaurant.id}
+          calls={calls}
+          onAckCall={acknowledgeCall}
+        />
+      )}
     </div>
   )
 }

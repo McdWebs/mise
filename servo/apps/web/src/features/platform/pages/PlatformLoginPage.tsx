@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
+import { supabasePlatform as supabase } from '@/lib/supabasePlatform'
 
 export default function PlatformLoginPage() {
   const navigate = useNavigate()

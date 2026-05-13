@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useMemo } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { KpiTile } from '../components/KpiTile'
 import { Sk } from '../components/Skeleton'
@@ -21,21 +22,37 @@ interface AssistantPageProps {
 }
 
 export function AssistantPage({ restaurant }: AssistantPageProps) {
-  const since = startOfToday()
+  const since = useMemo(startOfToday, [])
+  const queryClient = useQueryClient()
+  const key = ['admin-conversations', restaurant.id]
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
-    queryKey: ['admin-conversations', restaurant.id, since],
+    queryKey: key,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('assistant_conversations')
         .select('id, created_at, messages_jsonb')
         .eq('restaurant_id', restaurant.id)
         .gte('created_at', since)
+        .order('created_at', { ascending: false })
       if (error) throw error
       return (data ?? []) as Conversation[]
     },
-    staleTime: 1000 * 60,
+    staleTime: 0,
   })
+
+  // Realtime: invalidate whenever a conversation is inserted or updated
+  useEffect(() => {
+    const ch = supabase
+      .channel(`assistant-conversations-${restaurant.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'assistant_conversations', filter: `restaurant_id=eq.${restaurant.id}` },
+        () => queryClient.invalidateQueries({ queryKey: key })
+      )
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [restaurant.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const total = conversations.length
 

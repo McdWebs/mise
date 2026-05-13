@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Send, X } from 'lucide-react'
+import { Loader2, Send, X } from 'lucide-react'
+import { AssistantMessageContent } from './AssistantMessageContent'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -24,7 +25,10 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
     },
   ])
   const [draft, setDraft] = useState('')
+  /** True while the request is in flight (connecting or streaming). */
   const [loading, setLoading] = useState(false)
+  /** True until the first streamed character arrives (model + tools). */
+  const [awaitingReply, setAwaitingReply] = useState(false)
   const [open, setOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -61,6 +65,7 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
     setMessages(prev => [...prev, userMessage])
     setDraft('')
     setLoading(true)
+    setAwaitingReply(true)
 
     const apiBase = import.meta.env.VITE_API_BASE_URL
     if (!apiBase) {
@@ -71,6 +76,7 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
           { role: 'assistant', content: 'The menu assistant will be available shortly. A member of the team is happy to help in the meantime.' },
         ])
         setLoading(false)
+        setAwaitingReply(false)
       }, 600)
       return
     }
@@ -107,6 +113,7 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
               const parsed = JSON.parse(data)
               const delta = parsed.choices?.[0]?.delta?.content ?? parsed.delta ?? ''
               assistantContent += delta
+              if (assistantContent.length > 0) setAwaitingReply(false)
               setMessages(prev => {
                 const updated = [...prev]
                 updated[updated.length - 1] = { role: 'assistant', content: assistantContent }
@@ -119,12 +126,19 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
         }
       }
     } catch {
-      setMessages(prev => [
-        ...prev,
-        { role: 'assistant', content: 'Couldn\'t reach the assistant right now. A server is happy to help.' },
-      ])
+      setMessages(prev => {
+        const last = prev[prev.length - 1]
+        const fallback = {
+          role: 'assistant' as const,
+          content: 'Couldn\'t reach the assistant right now. A server is happy to help.',
+        }
+        if (last?.role === 'assistant' && last.content === '')
+          return [...prev.slice(0, -1), fallback]
+        return [...prev, fallback]
+      })
     } finally {
       setLoading(false)
+      setAwaitingReply(false)
     }
   }
 
@@ -175,7 +189,13 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
 
         {/* Messages */}
         <div className="flex-1 overflow-y-auto flex flex-col gap-3 pb-1">
-          {messages.map((m, i) => (
+          {messages.map((m, i) => {
+            const isLastAssistant = m.role === 'assistant' && i === messages.length - 1
+            const showConnecting =
+              isLastAssistant && awaitingReply && m.content === ''
+            const showStreaming = isLastAssistant && loading && !awaitingReply && m.content.length > 0
+
+            return (
             <div
               key={i}
               className={`max-w-[80%] px-3.5 py-2.5 text-[14px] leading-[1.5] ${
@@ -184,16 +204,28 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
                   : 'bg-saffron text-paper rounded-[14px_14px_4px_14px] self-end'
               }`}
             >
-              {m.content}
-              {m.role === 'assistant' && loading && i === messages.length - 1 && m.content === '' && (
-                <span className="inline-flex gap-1 items-center h-4">
-                  <span className="w-1.5 h-1.5 bg-ink-6 rounded-full animate-bounce [animation-delay:0ms]" />
-                  <span className="w-1.5 h-1.5 bg-ink-6 rounded-full animate-bounce [animation-delay:150ms]" />
-                  <span className="w-1.5 h-1.5 bg-ink-6 rounded-full animate-bounce [animation-delay:300ms]" />
-                </span>
+              {m.role === 'assistant' ? (
+                <>
+                  {m.content ? <AssistantMessageContent text={m.content} /> : null}
+                  {showConnecting && (
+                    <div className="flex items-center gap-2 text-ink-6 min-h-[1.25rem]" aria-live="polite" aria-busy="true">
+                      <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden />
+                      <span className="text-[13px]">Checking the menu…</span>
+                    </div>
+                  )}
+                  {showStreaming && (
+                    <span
+                      className="inline-block w-0.5 h-[1em] ml-0.5 align-[-0.15em] bg-ink animate-pulse rounded-sm"
+                      aria-hidden
+                    />
+                  )}
+                </>
+              ) : (
+                m.content
               )}
             </div>
-          ))}
+            )
+          })}
           <div ref={bottomRef} />
         </div>
 

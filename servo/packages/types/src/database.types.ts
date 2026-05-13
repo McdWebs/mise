@@ -330,6 +330,90 @@ export interface Database {
         }
         Relationships: Rel[]
       }
+      tables: {
+        Row: {
+          id: string
+          restaurant_id: string
+          label: string
+          seats: number
+          sort_order: number
+          active: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          label: string
+          seats?: number
+          sort_order?: number
+          active?: boolean
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          label?: string
+          seats?: number
+          sort_order?: number
+          active?: boolean
+          created_at?: string
+        }
+        Relationships: Rel[]
+      }
+      table_status: {
+        Row: {
+          table_id: string
+          restaurant_id: string
+          waiter_name: string | null
+          merged_into: string | null
+          notes: string | null
+          updated_at: string
+          cleared_at: string | null
+        }
+        Insert: {
+          table_id: string
+          restaurant_id: string
+          waiter_name?: string | null
+          merged_into?: string | null
+          notes?: string | null
+          updated_at?: string
+          cleared_at?: string | null
+        }
+        Update: {
+          table_id?: string
+          restaurant_id?: string
+          waiter_name?: string | null
+          merged_into?: string | null
+          notes?: string | null
+          updated_at?: string
+          cleared_at?: string | null
+        }
+        Relationships: Rel[]
+      }
+      waiter_calls: {
+        Row: {
+          id: string
+          restaurant_id: string
+          table_label: string
+          called_at: string
+          acknowledged_at: string | null
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          table_label: string
+          called_at?: string
+          acknowledged_at?: string | null
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          table_label?: string
+          called_at?: string
+          acknowledged_at?: string | null
+        }
+        Relationships: Rel[]
+      }
     }
     Views: Record<string, never>
     Functions: Record<string, never>

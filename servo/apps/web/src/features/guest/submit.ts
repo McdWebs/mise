@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { notifyKitchenOrderCreated } from '@/features/kitchen/liveChannel'
 import type { CartLine } from './store/cartStore'
 
 // TODO: payments — integrate payment provider here before taking money live.
@@ -63,6 +64,8 @@ export async function submitOrder({
   )
 
   if (itemsError) throw itemsError
+
+  notifyKitchenOrderCreated(restaurantId, order.id)
 
   return { orderId: order.id }
 }

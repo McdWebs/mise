@@ -1,10 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
-import { MessageCircle, BellRing, Check } from 'lucide-react'
+import { MessageCircle, BellRing, Check, ScanLine, PauseCircle } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
 import { useRestaurant } from '../hooks/useRestaurant'
 import { useMenu } from '../hooks/useMenu'
+import { useGuestTable } from '../hooks/useGuestTable'
 import { useCartStore } from '../store/cartStore'
 import { submitOrder } from '../submit'
+import { notifyKitchenFloorNudge } from '@/features/kitchen/liveChannel'
 import { CoverScreen } from '../components/CoverScreen'
 import { VenueHeader } from '../components/VenueHeader'
 import { CategoryNav } from '../components/CategoryNav'
@@ -15,17 +19,44 @@ import { CartSheet } from '../components/CartSheet'
 import { AssistantSheet } from '../components/AssistantSheet'
 import { PlansSection } from '../components/PlansSection'
 import { usePlans } from '../hooks/usePlans'
+import { useTableOrders } from '../hooks/useTableOrders'
+import { TableOrdersSheet } from '../components/TableOrdersSheet'
 import type { MenuItem } from '@servo/types'
 
-type Screen = 'cover' | 'menu'
+const BG = { backgroundImage: 'url(/assets/pattern-tablecloth.svg)', backgroundRepeat: 'repeat' }
+
+function guestCoverStorageKey(restaurantId: string, tableId: string, clearedAt: string | null) {
+  // Include clearedAt so every table turnover gets a fresh cover gate
+  return `servo:guest-cover-dismissed:${restaurantId}:${tableId}:${clearedAt ?? 'initial'}`
+}
+
+function isGuestCoverDismissed(restaurantId: string, tableId: string, clearedAt: string | null): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return window.sessionStorage.getItem(guestCoverStorageKey(restaurantId, tableId, clearedAt)) === '1'
+  } catch {
+    return false
+  }
+}
+
+function persistGuestCoverDismissed(restaurantId: string, tableId: string, clearedAt: string | null) {
+  try {
+    window.sessionStorage.setItem(guestCoverStorageKey(restaurantId, tableId, clearedAt), '1')
+  } catch {
+    // private mode / quota — guest can still continue this navigation
+  }
+}
 
 export default function GuestMenuPage() {
   const { slug } = useParams<{ slug: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
-  const tableLabel = searchParams.get('table') ?? 'T 1'
 
-  const [screen, setScreen] = useState<Screen>('cover')
+  // Raw param — null means not provided
+  const tableParam = searchParams.get('table')
+
+  /** True after "Start ordering" this mount; sessionStorage handles remounts (e.g. Order more). */
+  const [enteredMenuThisMount, setEnteredMenuThisMount] = useState(false)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [openItem, setOpenItem] = useState<MenuItem | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
@@ -34,29 +65,35 @@ export default function GuestMenuPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [waiterCalled, setWaiterCalled] = useState(false)
   const [showWaiterToast, setShowWaiterToast] = useState(false)
+  const [ordersSheetOpen, setOrdersSheetOpen] = useState(false)
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
   const headerRef = useRef<HTMLDivElement>(null)
   const navRef = useRef<HTMLDivElement>(null)
 
   const { data: restaurant, isLoading: loadingRestaurant, error: restaurantError } = useRestaurant(slug ?? '')
+  const { data: guestTable, isLoading: loadingTable } = useGuestTable(restaurant?.id, tableParam)
   const { data: categories = [], isLoading: loadingMenu } = useMenu(restaurant?.id)
-
   const { data: plans = [] } = usePlans(restaurant?.id)
+  const ordersTableLabel = guestTable?.label ?? tableParam
+  // Only show orders placed since the last table clear (treats each turnover as a fresh session)
+  const { data: tableOrders = [] } = useTableOrders(restaurant?.id, ordersTableLabel, guestTable?.cleared_at)
+
+  const queryClient = useQueryClient()
   const { addLine, getLines, getTotalCents, getTotalItems, clearCart } = useCartStore()
   const restaurantId = restaurant?.id ?? ''
+  // After validation, tableLabel is always the string from the confirmed table record
+  const tableLabel = guestTable?.label ?? tableParam ?? ''
   const lines = getLines(restaurantId)
   const totalCents = getTotalCents(restaurantId)
   const totalItems = getTotalItems(restaurantId)
 
-  // Set initial active category once menu loads
   useEffect(() => {
     if (categories.length && !activeCatId) {
       setActiveCatId(categories[0].id)
     }
   }, [categories, activeCatId])
 
-  // Scroll to section when category chip is picked, offsetting for sticky headers
   function handleCatPick(id: string) {
     setActiveCatId(id)
     const el = sectionRefs.current[id]
@@ -68,7 +105,18 @@ export default function GuestMenuPage() {
     window.scrollTo({ top, behavior: 'smooth' })
   }
 
-  // Intersection observer — update active chip as user scrolls
+  // Live-update accepting_orders so the paused screen appears/clears within seconds
+  useEffect(() => {
+    if (!restaurant?.id) return
+    const ch = supabase
+      .channel(`restaurant-accepting-${restaurant.id}`)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'restaurants', filter: `id=eq.${restaurant.id}` }, () => {
+        queryClient.invalidateQueries({ queryKey: ['restaurant', slug] })
+      })
+      .subscribe()
+    return () => { supabase.removeChannel(ch) }
+  }, [restaurant?.id, slug]) // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     if (!categories.length) return
     const observer = new IntersectionObserver(
@@ -91,7 +139,7 @@ export default function GuestMenuPage() {
       setCartOpen(false)
       navigate(`/r/${slug}/order/${orderId}?table=${encodeURIComponent(tableLabel)}`)
     } catch (err) {
-      setSubmitError('Couldn\'t reach the kitchen. Your order is saved — tap to retry.')
+      setSubmitError("Couldn't reach the kitchen. Your order is saved — tap to retry.")
       console.error(err)
     } finally {
       setSubmitting(false)
@@ -104,15 +152,26 @@ export default function GuestMenuPage() {
     setShowWaiterToast(true)
     setTimeout(() => setShowWaiterToast(false), 3500)
     setTimeout(() => setWaiterCalled(false), 45_000)
+    if (!restaurantId) return
+    void (async () => {
+      const { error } = await supabase
+        .from('waiter_calls')
+        .insert({ restaurant_id: restaurantId, table_label: tableLabel })
+      if (!error) notifyKitchenFloorNudge(restaurantId)
+    })()
   }
 
-  if (loadingRestaurant) {
+  // ── Loading ────────────────────────────────────────────────────────────────
+
+  if (loadingRestaurant || (restaurant && loadingTable)) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-paper">
         <div className="w-5 h-5 border-2 border-paper-3 border-t-saffron rounded-full animate-spin" />
       </div>
     )
   }
+
+  // ── Restaurant not found ───────────────────────────────────────────────────
 
   if (restaurantError || !restaurant) {
     return (
@@ -125,31 +184,95 @@ export default function GuestMenuPage() {
     )
   }
 
-  if (screen === 'cover') {
+  // ── No table in URL ────────────────────────────────────────────────────────
+
+  if (!tableParam) {
     return (
-      <div
-        className="min-h-dvh bg-paper"
-        style={{ backgroundImage: 'url(/assets/pattern-tablecloth.svg)', backgroundRepeat: 'repeat' }}
-      >
+      <div className="min-h-dvh bg-paper" style={BG}>
+        <div className="w-full max-w-[420px] mx-auto flex flex-col items-center justify-center min-h-dvh px-8 text-center">
+          <ScanLine size={40} className="text-ink-5 mb-5" strokeWidth={1.5} />
+          <p className="font-display text-[26px] font-[500] tracking-[-0.01em] text-ink leading-snug font-optical mb-2">
+            Scan your table's QR code
+          </p>
+          <p className="text-[15px] text-ink-5 leading-relaxed">
+            Use the code on your table to open the menu and place your order.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Table param present but not found in this restaurant ───────────────────
+
+  if (!guestTable) {
+    return (
+      <div className="min-h-dvh bg-paper" style={BG}>
+        <div className="w-full max-w-[420px] mx-auto flex flex-col items-center justify-center min-h-dvh px-8 text-center">
+          <ScanLine size={40} className="text-ink-5 mb-5" strokeWidth={1.5} />
+          <p className="font-display text-[26px] font-[500] tracking-[-0.01em] text-ink leading-snug font-optical mb-2">
+            Table not found
+          </p>
+          <p className="text-[15px] text-ink-5 leading-relaxed">
+            This table doesn't exist on the menu. Ask your server for the correct QR code.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Cover screen (once per browser session per table; clears when tab closes) ──
+
+  const skipCover =
+    enteredMenuThisMount ||
+    isGuestCoverDismissed(restaurant.id, guestTable.id, guestTable.cleared_at)
+
+  if (!skipCover) {
+    return (
+      <div className="min-h-dvh bg-paper" style={BG}>
         <div className="w-full max-w-[420px] mx-auto">
           <CoverScreen
             restaurant={restaurant}
             tableLabel={tableLabel}
-            onEnter={() => setScreen('menu')}
+            onEnter={() => {
+              persistGuestCoverDismissed(restaurant.id, guestTable.id, guestTable.cleared_at)
+              setEnteredMenuThisMount(true)
+            }}
           />
         </div>
       </div>
     )
   }
 
+  // ── Orders paused ─────────────────────────────────────────────────────────
+
+  if (!restaurant.accepting_orders) {
+    return (
+      <div className="min-h-dvh bg-paper" style={BG}>
+        <div className="w-full max-w-[420px] mx-auto flex flex-col items-center justify-center min-h-dvh px-8 text-center">
+          <PauseCircle size={40} className="text-ink-5 mb-5" strokeWidth={1.5} />
+          <p className="font-display text-[26px] font-[500] tracking-[-0.01em] text-ink leading-snug font-optical mb-2">
+            Orders are paused
+          </p>
+          <p className="text-[15px] text-ink-5 leading-relaxed">
+            {restaurant.name} isn't accepting new orders right now. Check back in a moment.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ── Menu ───────────────────────────────────────────────────────────────────
+
   return (
-    <div
-      className="relative min-h-dvh bg-paper"
-      style={{ backgroundImage: 'url(/assets/pattern-tablecloth.svg)', backgroundRepeat: 'repeat' }}
-    >
+    <div className="relative min-h-dvh bg-paper" style={BG}>
       <div className="w-full max-w-[420px] mx-auto">
         <div ref={headerRef}>
-          <VenueHeader restaurant={restaurant} tableLabel={tableLabel} />
+          <VenueHeader
+            restaurant={restaurant}
+            tableLabel={tableLabel}
+            onMyOrders={() => setOrdersSheetOpen(true)}
+            orderCount={tableOrders.length}
+          />
         </div>
 
         <div ref={navRef}>
@@ -160,7 +283,6 @@ export default function GuestMenuPage() {
           />
         </div>
 
-        {/* Plans */}
         <PlansSection
           plans={plans}
           currency={restaurant.currency}
@@ -176,7 +298,6 @@ export default function GuestMenuPage() {
           }
         />
 
-        {/* Menu sections */}
         <div className="pb-4">
           {loadingMenu ? (
             <div className="flex justify-center py-16">
@@ -204,7 +325,6 @@ export default function GuestMenuPage() {
         </div>
       </div>
 
-      {/* Sticky cart bar */}
       <CartBar
         itemCount={totalItems}
         totalCents={totalCents}
@@ -233,14 +353,12 @@ export default function GuestMenuPage() {
         <MessageCircle size={22} />
       </button>
 
-      {/* Waiter called toast */}
       {showWaiterToast && (
         <div className="fixed bottom-[160px] left-1/2 -translate-x-1/2 z-50 bg-ink text-paper text-body-sm px-4 py-3 rounded-2 shadow-2 whitespace-nowrap animate-fade-in">
           Waiter on the way to {tableLabel}
         </div>
       )}
 
-      {/* Sheets */}
       {openItem && (
         <ItemSheet
           item={openItem}
@@ -275,6 +393,16 @@ export default function GuestMenuPage() {
           restaurantName={restaurant.name}
           tableLabel={tableLabel}
           onClose={() => setAiOpen(false)}
+        />
+      )}
+
+      {ordersSheetOpen && (
+        <TableOrdersSheet
+          slug={slug ?? ''}
+          tableLabel={tableLabel}
+          currency={restaurant.currency}
+          orders={tableOrders}
+          onClose={() => setOrdersSheetOpen(false)}
         />
       )}
     </div>

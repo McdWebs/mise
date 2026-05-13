@@ -1,11 +1,13 @@
 import { useState, useMemo } from 'react'
-import { LogOut } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { LogOut, Plus } from 'lucide-react'
+import { supabasePlatform as supabase } from '@/lib/supabasePlatform'
 import { useFleet } from '../hooks/useFleet'
-import { useSuperAdmin } from '../hooks/useSuperAdmin'
 import { TenantInspector } from '../components/TenantInspector'
+import { AnalyticsView } from '../components/AnalyticsView'
+import { CreateRestaurantModal } from '../components/CreateRestaurantModal'
 import type { FleetTenant } from '../hooks/useFleet'
 
+type PlatformView = 'fleet' | 'analytics'
 type FilterKey = 'all' | 'live' | 'paused' | 'issues'
 
 const FILTERS: { key: FilterKey; label: string }[] = [
@@ -52,12 +54,13 @@ function fmtRevenue(cents: number): string {
 }
 
 export default function PlatformPage() {
-  const { user } = useSuperAdmin()
   const { data: tenants = [], isLoading, dataUpdatedAt } = useFleet()
 
+  const [view, setView] = useState<PlatformView>('fleet')
   const [filter, setFilter] = useState<FilterKey>('all')
   const [search, setSearch] = useState('')
   const [selected, setSelected] = useState<FleetTenant | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
 
   const filtered = useMemo(() => {
     let list = tenants
@@ -106,18 +109,22 @@ export default function PlatformPage() {
           PROD
         </span>
 
-        <div className="ml-auto flex items-center gap-3.5">
-          {/* Search */}
-          <div className="flex items-center gap-2 px-3.5 py-2 border-[1.5px] border-paper-4 rounded-pill min-w-[260px]">
-            <span className="text-ink-7 text-[16px] leading-none">⌕</span>
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Find a tenant by name or slug…"
-              className="flex-1 bg-transparent border-none outline-none text-body text-ink placeholder:text-ink-7"
-            />
-          </div>
-          <span className="text-body-sm text-ink-6">{user?.email}</span>
+        {/* View tabs */}
+        <div className="flex items-center gap-1 ml-5 border border-paper-3 rounded-pill p-0.5">
+          {(['fleet', 'analytics'] as PlatformView[]).map(v => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`px-3.5 py-1.5 rounded-pill text-body-sm font-medium capitalize transition-colors duration-hover ${
+                view === v ? 'bg-ink text-paper' : 'text-ink-5 hover:text-ink'
+              }`}
+            >
+              {v}
+            </button>
+          ))}
+        </div>
+
+        <div className="ml-auto flex items-center">
           <button
             onClick={() => supabase.auth.signOut()}
             className="text-ink-6 hover:text-ink transition-colors duration-hover"
@@ -130,99 +137,124 @@ export default function PlatformPage() {
 
       {/* Main */}
       <main className="px-8 py-7 max-w-[1480px]">
-        {/* Page header */}
-        <div className="flex items-baseline justify-between mb-5">
-          <div>
-            <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">Fleet</h1>
-            <div className="text-body-sm text-ink-6 mt-0.5">
-              {tenants.length} venue{tenants.length !== 1 ? 's' : ''} · {withErrors} with errors · last sync {lastSync}
-            </div>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center gap-2 mb-3.5">
-          {FILTERS.map(f => (
-            <button
-              key={f.key}
-              onClick={() => setFilter(f.key)}
-              className={`px-3 py-1.5 rounded-pill border-[1.5px] text-body-sm font-medium transition-colors duration-hover whitespace-nowrap ${filter === f.key ? 'bg-ink border-ink text-paper' : 'bg-paper border-paper-4 text-ink hover:border-ink-5'}`}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Fleet table */}
-        <div className="bg-paper border border-paper-3 rounded-3 overflow-hidden">
-          {/* Table header */}
-          <div
-            className="grid gap-3.5 px-4.5 py-3 bg-paper-2 text-overline text-ink-6 uppercase tracking-widest"
-            style={{ gridTemplateColumns: GRID, padding: '10px 18px' }}
-          >
-            <span />
-            <span>Venue</span>
-            <span>State</span>
-            <span>Orders today</span>
-            <span>Revenue</span>
-            <span>Errors</span>
-            <span>Last seen</span>
-            <span />
-          </div>
-
-          {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="w-5 h-5 border-2 border-paper-3 border-t-saffron rounded-full animate-spin" />
-            </div>
-          ) : filtered.length === 0 ? (
-            <div className="py-12 text-center text-body-sm text-ink-6">No venues match this filter.</div>
-          ) : (
-            filtered.map(tenant => (
-              <div
-                key={tenant.id}
-                className="grid gap-3.5 border-t border-paper-3 items-center cursor-pointer hover:bg-paper-2 transition-colors duration-hover"
-                style={{ gridTemplateColumns: GRID, padding: '12px 18px' }}
-                onClick={() => setSelected(tenant)}
-              >
-                <HealthDot health={tenant.health} />
-
-                <div>
-                  <div className="font-display text-[16px] font-[500] text-ink tracking-[-0.005em] leading-tight">
-                    {tenant.name}
-                  </div>
-                  <div className="font-mono text-[11px] text-ink-6 mt-0.5">
-                    {window.location.host}/r/{tenant.slug}
-                  </div>
+        {view === 'analytics' ? (
+          <AnalyticsView />
+        ) : (
+          <>
+            {/* Page header + search */}
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between mb-5">
+              <div>
+                <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">Fleet</h1>
+                <div className="text-body-sm text-ink-6 mt-0.5">
+                  {tenants.length} venue{tenants.length !== 1 ? 's' : ''} · {withErrors} with errors · last sync {lastSync}
                 </div>
-
-                <StatePill state={tenant.state} />
-
-                <span className="font-mono tabular-nums text-body-sm text-ink">
-                  {tenant.ordersToday}
-                </span>
-
-                <span className="font-mono tabular-nums text-body-sm text-ink">
-                  {fmtRevenue(tenant.revenueTodayCents)}
-                </span>
-
-                <span
-                  className={`font-mono tabular-nums text-body-sm ${tenant.errors > 0 ? 'text-ember' : 'text-ink-6'}`}
-                >
-                  {tenant.errors}
-                </span>
-
-                <span className="font-mono text-[12px] text-ink-6">
-                  {fmtLastSeen(tenant.lastSeenAt)}
-                </span>
-
-                <span className="text-ink-7 text-[16px]">›</span>
               </div>
-            ))
-          )}
-        </div>
+              <div className="flex items-center gap-2.5 shrink-0">
+                <div className="flex items-center gap-2 px-3.5 py-2 border-[1.5px] border-paper-4 rounded-pill min-w-[260px] w-full sm:w-auto sm:max-w-[320px]">
+                  <span className="text-ink-7 text-[16px] leading-none shrink-0">⌕</span>
+                  <input
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    placeholder="Find a tenant by name or slug…"
+                    className="flex-1 min-w-0 bg-transparent border-none outline-none text-body text-ink placeholder:text-ink-7"
+                  />
+                </div>
+                <button
+                  onClick={() => setCreateOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-pill bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover whitespace-nowrap shrink-0"
+                >
+                  <Plus size={14} strokeWidth={2.5} />
+                  New restaurant
+                </button>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div className="flex items-center gap-2 mb-3.5">
+              {FILTERS.map(f => (
+                <button
+                  key={f.key}
+                  onClick={() => setFilter(f.key)}
+                  className={`px-3 py-1.5 rounded-pill border-[1.5px] text-body-sm font-medium transition-colors duration-hover whitespace-nowrap ${filter === f.key ? 'bg-ink border-ink text-paper' : 'bg-paper border-paper-4 text-ink hover:border-ink-5'}`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Fleet table */}
+            <div className="bg-paper border border-paper-3 rounded-3 overflow-hidden">
+              {/* Table header */}
+              <div
+                className="grid gap-3.5 px-4.5 py-3 bg-paper-2 text-overline text-ink-6 uppercase tracking-widest"
+                style={{ gridTemplateColumns: GRID, padding: '10px 18px' }}
+              >
+                <span />
+                <span>Venue</span>
+                <span>State</span>
+                <span>Orders today</span>
+                <span>Revenue</span>
+                <span>Errors</span>
+                <span>Last seen</span>
+                <span />
+              </div>
+
+              {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="w-5 h-5 border-2 border-paper-3 border-t-saffron rounded-full animate-spin" />
+                </div>
+              ) : filtered.length === 0 ? (
+                <div className="py-12 text-center text-body-sm text-ink-6">No venues match this filter.</div>
+              ) : (
+                filtered.map(tenant => (
+                  <div
+                    key={tenant.id}
+                    className="grid gap-3.5 border-t border-paper-3 items-center cursor-pointer hover:bg-paper-2 transition-colors duration-hover"
+                    style={{ gridTemplateColumns: GRID, padding: '12px 18px' }}
+                    onClick={() => setSelected(tenant)}
+                  >
+                    <HealthDot health={tenant.health} />
+
+                    <div>
+                      <div className="font-display text-[16px] font-[500] text-ink tracking-[-0.005em] leading-tight">
+                        {tenant.name}
+                      </div>
+                      <div className="font-mono text-[11px] text-ink-6 mt-0.5">
+                        {window.location.host}/r/{tenant.slug}
+                      </div>
+                    </div>
+
+                    <StatePill state={tenant.state} />
+
+                    <span className="font-mono tabular-nums text-body-sm text-ink">
+                      {tenant.ordersToday}
+                    </span>
+
+                    <span className="font-mono tabular-nums text-body-sm text-ink">
+                      {fmtRevenue(tenant.revenueTodayCents)}
+                    </span>
+
+                    <span
+                      className={`font-mono tabular-nums text-body-sm ${tenant.errors > 0 ? 'text-ember' : 'text-ink-6'}`}
+                    >
+                      {tenant.errors}
+                    </span>
+
+                    <span className="font-mono text-[12px] text-ink-6">
+                      {fmtLastSeen(tenant.lastSeenAt)}
+                    </span>
+
+                    <span className="text-ink-7 text-[16px]">›</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </>
+        )}
       </main>
 
       <TenantInspector tenant={selected} onClose={() => setSelected(null)} />
+      <CreateRestaurantModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   )
 }
