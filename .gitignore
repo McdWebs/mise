@@ -1,5 +1,5 @@
 # Design handoff — large reference bundle; keep out of git
-design_handoff_servo/
+design_handoff/
 
 # Local build / agent prompts (not for the repo)
 prompt.md
