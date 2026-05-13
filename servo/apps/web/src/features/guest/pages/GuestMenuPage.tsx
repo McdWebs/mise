@@ -71,7 +71,6 @@ export default function GuestMenuPage() {
   const [ordersSheetOpen, setOrdersSheetOpen] = useState(false)
 
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const headerRef = useRef<HTMLDivElement>(null)
   const navRef = useRef<HTMLDivElement>(null)
 
   const { data: restaurant, isLoading: loadingRestaurant, error: restaurantError } = useRestaurant(slug ?? '')
@@ -101,9 +100,8 @@ export default function GuestMenuPage() {
     setActiveCatId(id)
     const el = sectionRefs.current[id]
     if (!el) return
-    const stickyOffset =
-      (headerRef.current?.offsetHeight ?? 0) +
-      (navRef.current?.offsetHeight ?? 0)
+    // Nav is sticky; use its live bottom edge so offset matches header+nav at top of page and nav-only after header scrolls away.
+    const stickyOffset = navRef.current?.getBoundingClientRect().bottom ?? 0
     const top = el.getBoundingClientRect().top + window.scrollY - stickyOffset
     window.scrollTo({ top, behavior: 'smooth' })
   }
@@ -293,22 +291,19 @@ export default function GuestMenuPage() {
   return (
     <div className="relative min-h-dvh bg-paper" style={BG}>
       <div className="w-full max-w-[420px] mx-auto">
-        <div ref={headerRef}>
-          <VenueHeader
-            restaurant={restaurant}
-            tableLabel={tableLabel}
-            onMyOrders={() => setOrdersSheetOpen(true)}
-            orderCount={tableOrders.length}
-          />
-        </div>
+        <VenueHeader
+          restaurant={restaurant}
+          tableLabel={tableLabel}
+          onMyOrders={() => setOrdersSheetOpen(true)}
+          orderCount={tableOrders.length}
+        />
 
-        <div ref={navRef}>
-          <CategoryNav
-            categories={categories}
-            activeId={activeCatId}
-            onPick={handleCatPick}
-          />
-        </div>
+        <CategoryNav
+          ref={navRef}
+          categories={categories}
+          activeId={activeCatId}
+          onPick={handleCatPick}
+        />
 
         <PlansSection
           plans={plans}

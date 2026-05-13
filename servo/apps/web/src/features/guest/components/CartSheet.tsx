@@ -21,6 +21,8 @@ export function CartSheet({ restaurantId, currency, lines, restaurantName, table
   const [open, setOpen] = useState(false)
   const [tipOption, setTipOption] = useState<TipOption>('10')
   const [customTip, setCustomTip] = useState('')
+  /** Pixels: caps sheet height to the visible viewport so content stays scrollable above the software keyboard. */
+  const [panelMaxPx, setPanelMaxPx] = useState<number | null>(null)
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setOpen(true))
@@ -41,6 +43,23 @@ export function CartSheet({ restaurantId, currency, lines, restaurantName, table
       document.body.style.overflow = ''
     }
   }, [handleClose])
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    const syncPanelMax = () => {
+      const h = vv?.height ?? window.innerHeight
+      setPanelMaxPx(Math.max(200, Math.round(h * 0.88)))
+    }
+    syncPanelMax()
+    vv?.addEventListener('resize', syncPanelMax)
+    vv?.addEventListener('scroll', syncPanelMax)
+    window.addEventListener('resize', syncPanelMax)
+    return () => {
+      vv?.removeEventListener('resize', syncPanelMax)
+      vv?.removeEventListener('scroll', syncPanelMax)
+      window.removeEventListener('resize', syncPanelMax)
+    }
+  }, [])
 
   const subtotalCents = lines.reduce((s, l) => s + l.unitPriceCents * l.quantity, 0)
 
@@ -71,11 +90,12 @@ export function CartSheet({ restaurantId, currency, lines, restaurantName, table
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 max-h-[88dvh] overflow-y-auto"
+        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 min-h-0 overflow-y-auto overscroll-contain"
         style={{
           transform: open ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 320ms cubic-bezier(0.2,0.8,0.2,1)',
           willChange: 'transform',
+          maxHeight: panelMaxPx != null ? `${panelMaxPx}px` : '88dvh',
         }}
         onClick={e => e.stopPropagation()}
         role="dialog"
@@ -170,12 +190,20 @@ export function CartSheet({ restaurantId, currency, lines, restaurantName, table
             <div className="mt-2.5 flex items-center gap-2 border border-[1.5px] border-paper-4 rounded-2 px-3 py-2 focus-within:border-saffron transition-[border-color] duration-standard">
               <input
                 type="number"
+                inputMode="decimal"
                 min="0"
                 max="100"
                 value={customTip}
                 onChange={e => setCustomTip(e.target.value)}
                 placeholder="0"
-                className="flex-1 bg-transparent outline-none text-[14px] text-ink placeholder:text-ink-8 w-0"
+                autoComplete="off"
+                className="flex-1 min-w-0 bg-transparent outline-none text-base text-ink placeholder:text-ink-8"
+                onFocus={e => {
+                  // Keep field in view when the on-screen keyboard shrinks the visual viewport.
+                  requestAnimationFrame(() => {
+                    e.target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' })
+                  })
+                }}
               />
               <span className="text-[14px] text-ink-5 font-medium">%</span>
             </div>

@@ -12,7 +12,7 @@ interface VenueHeaderProps {
 
 export function VenueHeader({ restaurant, tableLabel, onMyOrders, orderCount = 0 }: VenueHeaderProps) {
   return (
-    <div className="sticky top-0 z-[5] px-5 pt-5 pb-4">
+    <div className="px-5 pt-5 pb-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h1 className="font-display text-[24px] font-[500] tracking-[-0.01em] text-ink leading-tight font-optical truncate">

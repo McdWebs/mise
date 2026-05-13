@@ -33,6 +33,8 @@ export function ItemSheet({ item, currency, onClose, onAdd }: ItemSheetProps) {
   const [qty, setQty] = useState(1)
   const [request, setRequest] = useState('')
   const [open, setOpen] = useState(false)
+  /** Pixels: caps sheet height to the visible viewport above the software keyboard. */
+  const [panelMaxPx, setPanelMaxPx] = useState<number | null>(null)
   const [modGroups, setModGroups] = useState<ModGroup[]>([])
   const [modGroupsLoading, setModGroupsLoading] = useState(true)
   const [selections, setSelections] = useState<Record<string, Set<string>>>({})
@@ -56,6 +58,23 @@ export function ItemSheet({ item, currency, onClose, onAdd }: ItemSheetProps) {
       document.body.style.overflow = ''
     }
   }, [handleClose])
+
+  useEffect(() => {
+    const vv = window.visualViewport
+    const syncPanelMax = () => {
+      const h = vv?.height ?? window.innerHeight
+      setPanelMaxPx(Math.max(200, Math.round(h * 0.88)))
+    }
+    syncPanelMax()
+    vv?.addEventListener('resize', syncPanelMax)
+    vv?.addEventListener('scroll', syncPanelMax)
+    window.addEventListener('resize', syncPanelMax)
+    return () => {
+      vv?.removeEventListener('resize', syncPanelMax)
+      vv?.removeEventListener('scroll', syncPanelMax)
+      window.removeEventListener('resize', syncPanelMax)
+    }
+  }, [])
 
   // Fetch modifier groups for this item
   useEffect(() => {
@@ -136,11 +155,12 @@ export function ItemSheet({ item, currency, onClose, onAdd }: ItemSheetProps) {
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 max-h-[88dvh] overflow-y-auto"
+        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 min-h-0 overflow-y-auto overscroll-contain"
         style={{
           transform: open ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 320ms cubic-bezier(0.2,0.8,0.2,1)',
           willChange: 'transform',
+          maxHeight: panelMaxPx != null ? `${panelMaxPx}px` : '88dvh',
         }}
         onClick={e => e.stopPropagation()}
         role="dialog"
@@ -258,7 +278,14 @@ export function ItemSheet({ item, currency, onClose, onAdd }: ItemSheetProps) {
             onChange={e => setRequest(e.target.value)}
             placeholder="e.g. no parmesan, sauce on the side…"
             rows={2}
-            className="w-full rounded-2 border border-[1.5px] border-paper-4 bg-paper px-3 py-2 text-[14px] text-ink placeholder:text-ink-8 resize-none focus-visible:outline-none focus-visible:border-saffron focus-visible:border-2 transition-[border-color] duration-standard"
+            autoComplete="off"
+            enterKeyHint="done"
+            className="w-full rounded-2 border border-[1.5px] border-paper-4 bg-paper px-3 py-2 text-base text-ink placeholder:text-ink-8 resize-none focus-visible:outline-none focus-visible:border-saffron focus-visible:border-2 transition-[border-color] duration-standard"
+            onFocus={e => {
+              requestAnimationFrame(() => {
+                e.target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' })
+              })
+            }}
           />
         </div>
 
