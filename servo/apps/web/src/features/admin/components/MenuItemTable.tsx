@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
+import { formatPriceExact } from '@/features/guest/utils/formatPrice'
+import { ConfirmModal } from './ConfirmModal'
 import type { AdminMenuItem, AdminMenuCategory } from '../hooks/useAdminMenu'
 
 interface MenuItemTableProps {
@@ -8,6 +10,7 @@ interface MenuItemTableProps {
   categories: AdminMenuCategory[]
   activeCategoryId: string
   categoryName: string
+  currency: string
   onEdit: (item: AdminMenuItem) => void
   onAdd: () => void
   onLocalReorder: (sorted: AdminMenuItem[]) => void
@@ -18,6 +21,7 @@ export function MenuItemTable({
   categories,
   activeCategoryId,
   categoryName,
+  currency,
   onEdit,
   onAdd,
   onLocalReorder,
@@ -26,6 +30,7 @@ export function MenuItemTable({
   const [dragId, setDragId] = useState<string | null>(null)
   const [overId, setOverId] = useState<string | null>(null)
   const [menuFor, setMenuFor] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<AdminMenuItem | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Close context menu on outside click
@@ -95,6 +100,7 @@ export function MenuItemTable({
     await supabase.from('menu_items').delete().eq('id', item.id)
     qc.invalidateQueries({ queryKey: ['admin-menu'] })
     setMenuFor(null)
+    setPendingDelete(null)
   }
 
   return (
@@ -110,7 +116,8 @@ export function MenuItemTable({
             onDragOver={e => onDragOver(e, item.id)}
             onDrop={e => onDrop(e, item.id)}
             onDragEnd={onDragEnd}
-            className="grid items-center gap-4 px-1 py-3 border-b border-paper-3 hover:bg-paper-2 transition-colors duration-hover"
+            onClick={() => onEdit(item)}
+            className="grid items-center gap-4 px-1 py-3 border-b border-paper-3 hover:bg-paper-2 transition-colors duration-hover cursor-pointer"
             style={{
               gridTemplateColumns: '18px 1fr 90px 80px 40px',
               opacity: isDragging ? 0.4 : 1,
@@ -119,7 +126,13 @@ export function MenuItemTable({
             }}
           >
             {/* Drag handle */}
-            <span className="text-ink-7 cursor-grab text-[14px] leading-none select-none" title="Drag to reorder">⋮⋮</span>
+            <span
+              className="text-ink-7 cursor-grab text-[14px] leading-none select-none"
+              title="Drag to reorder"
+              onClick={e => e.stopPropagation()}
+            >
+              ⋮⋮
+            </span>
 
             {/* Name + desc */}
             <div className="min-w-0">
@@ -131,7 +144,7 @@ export function MenuItemTable({
 
             {/* Price */}
             <div className="font-mono font-semibold text-ink">
-              ${(item.price_cents / 100).toFixed(2)}
+              {formatPriceExact(item.price_cents, currency)}
             </div>
 
             {/* Available toggle */}
@@ -139,7 +152,10 @@ export function MenuItemTable({
               type="button"
               role="switch"
               aria-checked={item.available}
-              onClick={() => toggleAvailable(item)}
+              onClick={e => {
+                e.stopPropagation()
+                void toggleAvailable(item)
+              }}
               className={`w-8 h-[18px] rounded-pill relative transition-colors duration-hover ${item.available ? 'bg-herb' : 'bg-paper-3'}`}
             >
               <span
@@ -198,7 +214,7 @@ export function MenuItemTable({
 
                   <div className="h-px bg-paper-3 my-1.5 mx-1.5" />
                   <button
-                    onClick={() => deleteItem(item)}
+                    onClick={() => { setPendingDelete(item); setMenuFor(null) }}
                     className="w-full text-left px-3 py-2.5 rounded-2 text-body-sm text-ember hover:bg-ember-wash transition-colors duration-hover"
                   >
                     Delete item
@@ -219,6 +235,16 @@ export function MenuItemTable({
         <span />
         <span>+ Add item to {categoryName.toLowerCase()}</span>
       </button>
+
+      {pendingDelete && (
+        <ConfirmModal
+          title="Delete item"
+          message={`Delete "${pendingDelete.name}"? This cannot be undone.`}
+          confirmLabel="Delete item"
+          onConfirm={() => deleteItem(pendingDelete)}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </div>
   )
 }

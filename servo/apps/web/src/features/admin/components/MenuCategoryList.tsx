@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
+import { ConfirmModal } from './ConfirmModal'
 import type { AdminMenuCategory } from '../hooks/useAdminMenu'
 
 interface MenuCategoryListProps {
@@ -22,6 +23,7 @@ export function MenuCategoryList({
   const [addingName, setAddingName] = useState('')
   const [adding, setAdding] = useState(false)
   const [menuFor, setMenuFor] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<AdminMenuCategory | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -76,19 +78,13 @@ export function MenuCategoryList({
   }
 
   async function deleteCategory(cat: AdminMenuCategory) {
-    const n = cat.menu_items.length
-    const msg =
-      n > 0
-        ? `Delete “${cat.name}” and all ${n} item(s) in it? This cannot be undone.`
-        : `Delete empty category “${cat.name}”?`
-    if (!window.confirm(msg)) return
-
     const { error } = await supabase.from('menu_categories').delete().eq('id', cat.id)
     if (error) {
       window.alert(
         error.message ||
           'Could not delete this category. Items may still be linked to past orders — remove or reassign them first.'
       )
+      setPendingDelete(null)
       return
     }
 
@@ -97,6 +93,7 @@ export function MenuCategoryList({
     if (cat.id === activeCategoryId) {
       onSelect(remaining[0]?.id ?? '')
     }
+    setPendingDelete(null)
     setMenuFor(null)
 
     await Promise.all(
@@ -157,7 +154,7 @@ export function MenuCategoryList({
                 >
                   <button
                     type="button"
-                    onClick={() => deleteCategory(cat)}
+                    onClick={() => { setPendingDelete(cat); setMenuFor(null) }}
                     className="w-full text-left px-3 py-2.5 rounded-2 text-body-sm text-ember hover:bg-ember-wash transition-colors duration-hover"
                   >
                     Delete category
@@ -187,6 +184,20 @@ export function MenuCategoryList({
         >
           + Add category
         </button>
+      )}
+
+      {pendingDelete && (
+        <ConfirmModal
+          title="Delete category"
+          message={
+            pendingDelete.menu_items.length > 0
+              ? `Delete "${pendingDelete.name}" and all ${pendingDelete.menu_items.length} item${pendingDelete.menu_items.length === 1 ? '' : 's'} in it? This cannot be undone.`
+              : `Delete the empty category "${pendingDelete.name}"?`
+          }
+          confirmLabel="Delete category"
+          onConfirm={() => deleteCategory(pendingDelete)}
+          onCancel={() => setPendingDelete(null)}
+        />
       )}
     </div>
   )

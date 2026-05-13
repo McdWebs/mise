@@ -3,6 +3,7 @@ import { useAdminMenu } from '../hooks/useAdminMenu'
 import { MenuCategoryList } from '../components/MenuCategoryList'
 import { MenuItemTable } from '../components/MenuItemTable'
 import { ItemEditDrawer } from '../components/ItemEditDrawer'
+import { MenuImportModal } from '../components/MenuImportModal'
 import { Sk } from '../components/Skeleton'
 import type { AdminMenuCategory, AdminMenuItem } from '../hooks/useAdminMenu'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
@@ -19,6 +20,7 @@ export function MenuPage({ restaurant }: MenuPageProps) {
   const [activeCatId, setActiveCatId] = useState<string>('')
   // Item drawer state: undefined=closed, null=new, AdminMenuItem=edit
   const [editingItem, setEditingItem] = useState<AdminMenuItem | null | undefined>(undefined)
+  const [importOpen, setImportOpen] = useState(false)
 
   // Sync from server
   useEffect(() => {
@@ -52,12 +54,20 @@ export function MenuPage({ restaurant }: MenuPageProps) {
             Edit categories, items, prices, and availability. Drag rows to reorder.
           </div>
         </div>
-        <button
-          onClick={() => setEditingItem(null)}
-          className="px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover active:scale-[0.98] active:duration-press"
-        >
-          + New item
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setImportOpen(true)}
+            className="px-4 py-2.5 rounded-2 border border-paper-4 bg-paper text-ink text-body font-semibold hover:bg-paper-2 transition-colors duration-hover"
+          >
+            Import from file
+          </button>
+          <button
+            onClick={() => setEditingItem(null)}
+            className="px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover active:scale-[0.98] active:duration-press"
+          >
+            + New item
+          </button>
+        </div>
       </div>
 
       <div className="bg-paper border border-paper-3 rounded-3 p-5">
@@ -78,6 +88,7 @@ export function MenuPage({ restaurant }: MenuPageProps) {
                 categories={categories}
                 activeCategoryId={activeCatId}
                 categoryName={activeCategory.name}
+                currency={restaurant.currency}
                 onEdit={item => setEditingItem(item)}
                 onAdd={() => setEditingItem(null)}
                 onLocalReorder={handleLocalItemReorder}
@@ -93,9 +104,18 @@ export function MenuPage({ restaurant }: MenuPageProps) {
         open={editingItem !== undefined}
         categoryId={activeCatId}
         categoryName={activeCategory?.name ?? ''}
+        currency={restaurant.currency}
         item={editingItem ?? null}
         onClose={() => setEditingItem(undefined)}
       />
+
+      {importOpen && (
+        <MenuImportModal
+          restaurantId={restaurant.id}
+          existingCategories={categories}
+          onClose={() => setImportOpen(false)}
+        />
+      )}
     </>
   )
 }

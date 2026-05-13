@@ -50,6 +50,7 @@ export interface Database {
           tagline: string | null
           currency: string
           accepting_orders: boolean
+          suspended: boolean
           created_at: string
           updated_at: string
         }
@@ -60,6 +61,7 @@ export interface Database {
           tagline?: string | null
           currency?: string
           accepting_orders?: boolean
+          suspended?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -70,6 +72,7 @@ export interface Database {
           tagline?: string | null
           currency?: string
           accepting_orders?: boolean
+          suspended?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -129,6 +132,7 @@ export interface Database {
           price_cents: number
           available: boolean
           tags: string[]
+          allergens: string[]
           image_url: string | null
           sort_order: number
           created_at: string
@@ -142,6 +146,7 @@ export interface Database {
           price_cents: number
           available?: boolean
           tags?: string[]
+          allergens?: string[]
           image_url?: string | null
           sort_order?: number
           created_at?: string
@@ -155,6 +160,7 @@ export interface Database {
           price_cents?: number
           available?: boolean
           tags?: string[]
+          allergens?: string[]
           image_url?: string | null
           sort_order?: number
           created_at?: string
@@ -330,6 +336,63 @@ export interface Database {
         }
         Relationships: Rel[]
       }
+      modifier_groups: {
+        Row: {
+          id: string
+          menu_item_id: string
+          name: string
+          required: boolean
+          max_selections: number | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          menu_item_id: string
+          name: string
+          required?: boolean
+          max_selections?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          menu_item_id?: string
+          name?: string
+          required?: boolean
+          max_selections?: number | null
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: Rel[]
+      }
+      modifier_options: {
+        Row: {
+          id: string
+          group_id: string
+          name: string
+          price_cents: number
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          group_id: string
+          name: string
+          price_cents?: number
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          group_id?: string
+          name?: string
+          price_cents?: number
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: Rel[]
+      }
       tables: {
         Row: {
           id: string
@@ -414,6 +477,63 @@ export interface Database {
           table_label?: string
           called_at?: string
           acknowledged_at?: string | null
+        }
+        Relationships: Rel[]
+      }
+      support_messages: {
+        Row: {
+          id: string
+          restaurant_id: string
+          ticket_id: string | null
+          sender_role: 'owner' | 'platform'
+          body: string
+          read_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          ticket_id?: string | null
+          sender_role: 'owner' | 'platform'
+          body: string
+          read_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          ticket_id?: string | null
+          sender_role?: 'owner' | 'platform'
+          body?: string
+          read_at?: string | null
+          created_at?: string
+        }
+        Relationships: Rel[]
+      }
+      support_tickets: {
+        Row: {
+          id: string
+          restaurant_id: string
+          topic: string
+          status: 'open' | 'closed'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          restaurant_id: string
+          topic: string
+          status?: 'open' | 'closed'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          restaurant_id?: string
+          topic?: string
+          status?: 'open' | 'closed'
+          created_at?: string
+          updated_at?: string
         }
         Relationships: Rel[]
       }

@@ -9,6 +9,7 @@ export interface AdminMenuItem {
   price_cents: number
   available: boolean
   tags: string[]
+  allergens: string[]
   sort_order: number
 }
 

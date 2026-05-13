@@ -272,7 +272,7 @@ export default function GuestMenuPage() {
 
   // ── Orders paused ─────────────────────────────────────────────────────────
 
-  if (!restaurant.accepting_orders) {
+  if (!restaurant.accepting_orders || restaurant.suspended) {
     return (
       <div className="min-h-dvh bg-paper" style={BG}>
         <div className="w-full max-w-[420px] mx-auto flex flex-col items-center justify-center min-h-dvh px-8 text-center">

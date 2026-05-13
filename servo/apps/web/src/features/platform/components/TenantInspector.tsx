@@ -28,8 +28,23 @@ interface TenantInspectorProps {
 
 export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
   const qc = useQueryClient()
-  const [suspending, setSuspending] = useState(false)
   const open = tenant !== null
+
+  // Local copy so changes reflect immediately without waiting for a refetch
+  const [suspended, setSuspended] = useState(tenant?.suspended ?? false)
+  const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState('')
+  // 'suspend' | 'resume' | null — waiting for inline confirmation
+  const [confirming, setConfirming] = useState<'suspend' | 'resume' | null>(null)
+
+  // Sync local state when tenant prop changes (e.g. new tenant opened)
+  useEffect(() => {
+    if (tenant) {
+      setSuspended(tenant.suspended)
+      setActionError('')
+      setConfirming(null)
+    }
+  }, [tenant?.id])
 
   useEffect(() => {
     if (!open) return
@@ -44,15 +59,26 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
     return () => { document.body.style.overflow = '' }
   }, [open])
 
-  async function suspendTenant() {
+  async function setSuspendedState(value: boolean) {
     if (!tenant) return
-    const ok = window.confirm(`Suspend ${tenant.name}? This will stop accepting new orders.`)
-    if (!ok) return
-    setSuspending(true)
-    await supabase.from('restaurants').update({ accepting_orders: false }).eq('id', tenant.id)
+    setBusy(true)
+    setActionError('')
+    setConfirming(null)
+
+    const { error } = await supabase
+      .from('restaurants')
+      .update({ suspended: value })
+      .eq('id', tenant.id)
+
+    if (error) {
+      setActionError(error.message || 'Update failed — check your permissions.')
+      setBusy(false)
+      return
+    }
+
+    setSuspended(value)
     await qc.invalidateQueries({ queryKey: ['fleet'] })
-    setSuspending(false)
-    onClose()
+    setBusy(false)
   }
 
   const origin = window.location.origin
@@ -89,6 +115,13 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
               </button>
             </div>
 
+            {/* Status banner when suspended */}
+            {suspended && (
+              <div className="px-3 py-2.5 bg-ember-wash text-ember rounded-2 text-body-sm mb-4">
+                <strong className="font-semibold">Suspended</strong> — this restaurant has been locked by platform admin.
+              </div>
+            )}
+
             {/* Issue banner */}
             {tenant.issue && (
               <div className="px-3 py-2.5 bg-ember-wash text-ember-2 rounded-2 text-body-sm mb-4">
@@ -117,9 +150,9 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
               <h3 className="text-overline text-ink-6 uppercase tracking-widest mb-2.5">Open in</h3>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { label: 'Guest menu',   sub: `r/${tenant.slug}`,  href: `/r/${tenant.slug}` },
-                  { label: 'Kitchen',      sub: 'display board',     href: `/kitchen` },
-                  { label: 'Owner admin',  sub: 'impersonate',       href: `/admin` },
+                  { label: 'Guest menu',  sub: `r/${tenant.slug}`, href: `/r/${tenant.slug}` },
+                  { label: 'Kitchen',     sub: 'display board',    href: `/kitchen` },
+                  { label: 'Owner admin', sub: 'impersonate',      href: `/admin` },
                 ].map(({ label, sub, href }) => (
                   <a
                     key={label}
@@ -138,25 +171,81 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
             {/* Actions */}
             <div className="py-3.5">
               <h3 className="text-overline text-ink-6 uppercase tracking-widest mb-3">Actions</h3>
-              <div className="flex gap-2.5">
+              <div className="flex flex-wrap gap-2.5">
                 <button
                   onClick={() => {
-                    // Stub — Phase 8+ would trigger a re-publish job
                     alert('Re-publish triggered (stub — wire to deployment pipeline in phase 8).')
                   }}
                   className="px-3.5 py-2.5 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover"
                 >
                   Force re-publish menu
                 </button>
-                <button
-                  onClick={suspendTenant}
-                  disabled={suspending || !tenant.accepting_orders}
-                  className="px-3.5 py-2.5 rounded-2 border-[1.5px] border-ember-wash text-ember bg-paper text-body-sm font-semibold hover:bg-ember-wash transition-colors duration-hover disabled:opacity-40 disabled:cursor-not-allowed"
-                >
-                  {tenant.accepting_orders ? 'Suspend tenant' : 'Already paused'}
-                </button>
+
+                {/* Suspend / Unsuspend */}
+                {!suspended ? (
+                  confirming === 'suspend' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-body-sm text-ink-5">Suspend {tenant.name}?</span>
+                      <button
+                        onClick={() => setSuspendedState(true)}
+                        disabled={busy}
+                        className="px-3 py-2 rounded-2 bg-ember text-paper text-body-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        {busy ? 'Suspending…' : 'Yes, suspend'}
+                      </button>
+                      <button
+                        onClick={() => setConfirming(null)}
+                        disabled={busy}
+                        className="px-3 py-2 rounded-2 border border-paper-4 text-body-sm text-ink font-semibold hover:bg-paper-2 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirming('suspend')}
+                      disabled={busy}
+                      className="px-3.5 py-2.5 rounded-2 border-[1.5px] border-ember-wash text-ember bg-paper text-body-sm font-semibold hover:bg-ember-wash transition-colors duration-hover disabled:opacity-40"
+                    >
+                      Suspend tenant
+                    </button>
+                  )
+                ) : (
+                  confirming === 'resume' ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-body-sm text-ink-5">Unsuspend {tenant.name}?</span>
+                      <button
+                        onClick={() => setSuspendedState(false)}
+                        disabled={busy}
+                        className="px-3 py-2 rounded-2 bg-herb text-paper text-body-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                      >
+                        {busy ? 'Unsuspending…' : 'Yes, unsuspend'}
+                      </button>
+                      <button
+                        onClick={() => setConfirming(null)}
+                        disabled={busy}
+                        className="px-3 py-2 rounded-2 border border-paper-4 text-body-sm text-ink font-semibold hover:bg-paper-2 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setConfirming('resume')}
+                      disabled={busy}
+                      className="px-3.5 py-2.5 rounded-2 border-[1.5px] border-herb bg-paper text-herb text-body-sm font-semibold hover:bg-herb-wash transition-colors duration-hover disabled:opacity-40"
+                    >
+                      Unsuspend tenant
+                    </button>
+                  )
+                )}
               </div>
+
+              {actionError && (
+                <p className="text-body-sm text-ember mt-3">{actionError}</p>
+              )}
             </div>
+
           </div>
         )}
       </div>

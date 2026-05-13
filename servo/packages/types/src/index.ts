@@ -19,6 +19,7 @@ export interface Restaurant {
   tagline: string | null
   currency: string
   accepting_orders: boolean
+  suspended: boolean
   created_at: string
   updated_at: string
 }
@@ -40,6 +41,7 @@ export interface MenuItem {
   price_cents: number
   available: boolean
   tags: string[]
+  allergens: string[]
   image_url: string | null
   sort_order: number
   created_at: string

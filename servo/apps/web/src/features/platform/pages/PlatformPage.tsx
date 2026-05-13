@@ -4,10 +4,11 @@ import { supabasePlatform as supabase } from '@/lib/supabasePlatform'
 import { useFleet } from '../hooks/useFleet'
 import { TenantInspector } from '../components/TenantInspector'
 import { AnalyticsView } from '../components/AnalyticsView'
+import { MessagesView } from '../components/MessagesView'
 import { CreateRestaurantModal } from '../components/CreateRestaurantModal'
 import type { FleetTenant } from '../hooks/useFleet'
 
-type PlatformView = 'fleet' | 'analytics'
+type PlatformView = 'fleet' | 'analytics' | 'messages'
 type FilterKey = 'all' | 'live' | 'paused' | 'issues'
 
 const FILTERS: { key: FilterKey; label: string }[] = [
@@ -24,9 +25,9 @@ function HealthDot({ health }: { health: FleetTenant['health'] }) {
 
 function StatePill({ state }: { state: FleetTenant['state'] }) {
   const cfg = {
-    live:   { bg: 'bg-herb-wash',  text: 'text-herb-2'  },
-    paused: { bg: 'bg-paper-2',    text: 'text-ink-5'   },
-    err:    { bg: 'bg-ember-wash', text: 'text-ember-2' },
+    live:      { bg: 'bg-herb-wash',  text: 'text-herb-2'  },
+    paused:    { bg: 'bg-paper-2',    text: 'text-ink-5'   },
+    suspended: { bg: 'bg-ember-wash', text: 'text-ember-2' },
   }[state] ?? { bg: 'bg-paper-2', text: 'text-ink-5' }
 
   return (
@@ -65,7 +66,7 @@ export default function PlatformPage() {
   const filtered = useMemo(() => {
     let list = tenants
     if (filter === 'live')   list = list.filter(t => t.state === 'live')
-    if (filter === 'paused') list = list.filter(t => t.state === 'paused')
+    if (filter === 'paused') list = list.filter(t => t.state === 'paused' || t.state === 'suspended')
     if (filter === 'issues') list = list.filter(t => t.health !== 'ok')
     if (search.trim()) {
       const q = search.toLowerCase()
@@ -77,6 +78,7 @@ export default function PlatformPage() {
   }, [tenants, filter, search])
 
   const withErrors = tenants.filter(t => t.health !== 'ok').length
+  const totalUnread = tenants.reduce((sum, t) => sum + t.unreadMessages, 0)
   const lastSync = dataUpdatedAt
     ? new Date(dataUpdatedAt).toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit' })
     : '—'
@@ -111,15 +113,20 @@ export default function PlatformPage() {
 
         {/* View tabs */}
         <div className="flex items-center gap-1 ml-5 border border-paper-3 rounded-pill p-0.5">
-          {(['fleet', 'analytics'] as PlatformView[]).map(v => (
+          {(['fleet', 'analytics', 'messages'] as PlatformView[]).map(v => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3.5 py-1.5 rounded-pill text-body-sm font-medium capitalize transition-colors duration-hover ${
+              className={`relative px-3.5 py-1.5 rounded-pill text-body-sm font-medium capitalize transition-colors duration-hover ${
                 view === v ? 'bg-ink text-paper' : 'text-ink-5 hover:text-ink'
               }`}
             >
               {v}
+              {v === 'messages' && totalUnread > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 rounded-full bg-ember text-paper text-[10px] font-semibold flex items-center justify-center tabular-nums">
+                  {totalUnread > 9 ? '9+' : totalUnread}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -137,7 +144,9 @@ export default function PlatformPage() {
 
       {/* Main */}
       <main className="px-8 py-7 max-w-[1480px]">
-        {view === 'analytics' ? (
+        {view === 'messages' ? (
+          <MessagesView />
+        ) : view === 'analytics' ? (
           <AnalyticsView />
         ) : (
           <>
@@ -216,8 +225,15 @@ export default function PlatformPage() {
                     <HealthDot health={tenant.health} />
 
                     <div>
-                      <div className="font-display text-[16px] font-[500] text-ink tracking-[-0.005em] leading-tight">
-                        {tenant.name}
+                      <div className="flex items-center gap-2">
+                        <div className="font-display text-[16px] font-[500] text-ink tracking-[-0.005em] leading-tight">
+                          {tenant.name}
+                        </div>
+                        {tenant.unreadMessages > 0 && (
+                          <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-ember text-paper text-[11px] font-semibold flex items-center justify-center tabular-nums shrink-0">
+                            {tenant.unreadMessages > 9 ? '9+' : tenant.unreadMessages}
+                          </span>
+                        )}
                       </div>
                       <div className="font-mono text-[11px] text-ink-6 mt-0.5">
                         {window.location.host}/r/{tenant.slug}
