@@ -369,6 +369,7 @@ export interface Database {
           notes: string | null
           updated_at: string
           cleared_at: string | null
+          occupied_since: string | null
         }
         Insert: {
           table_id: string
@@ -378,6 +379,7 @@ export interface Database {
           notes?: string | null
           updated_at?: string
           cleared_at?: string | null
+          occupied_since?: string | null
         }
         Update: {
           table_id?: string
@@ -387,6 +389,7 @@ export interface Database {
           notes?: string | null
           updated_at?: string
           cleared_at?: string | null
+          occupied_since?: string | null
         }
         Relationships: Rel[]
       }

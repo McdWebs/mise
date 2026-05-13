@@ -1,10 +1,50 @@
-import { useEffect, useState } from 'react'
-import { X, Trash2, Check } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { X, Trash2, Check, Download, QrCode } from 'lucide-react'
+import { QRCodeCanvas } from 'qrcode.react'
 import { supabase } from '@/lib/supabase'
 import { Sk } from '@/features/admin/components/Skeleton'
 import { upsertTableStatus } from '../hooks/useTables'
 import type { TableWithStatus } from '../hooks/useTables'
 import type { WaiterCall } from '../hooks/useWaiterCalls'
+
+function QRCodeSection({ slug, tableLabel }: { slug: string; tableLabel: string }) {
+  const url = `${window.location.origin}/r/${slug}?table=${encodeURIComponent(tableLabel)}`
+  const canvasId = `qr-${tableLabel}`
+
+  function download() {
+    const canvas = document.getElementById(canvasId) as HTMLCanvasElement | null
+    if (!canvas) return
+    const link = document.createElement('a')
+    link.download = `table-${tableLabel}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  }
+
+  return (
+    <div className="flex items-start gap-4">
+      <div className="bg-white p-2 rounded-2 shrink-0">
+        <QRCodeCanvas
+          id={canvasId}
+          value={url}
+          size={100}
+          bgColor="#ffffff"
+          fgColor="#111111"
+          level="M"
+        />
+      </div>
+      <div className="flex flex-col gap-2 min-w-0">
+        <p className="font-mono text-[11px] text-ink-5 break-all leading-relaxed">{url}</p>
+        <button
+          onClick={download}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-2 bg-ink text-paper text-[12px] font-medium hover:bg-ink-2 transition-colors duration-hover w-fit"
+        >
+          <Download size={12} />
+          Download PNG
+        </button>
+      </div>
+    </div>
+  )
+}
 
 interface ActiveOrder {
   id: string
@@ -54,14 +94,21 @@ interface TableDrawerProps {
   table: TableWithStatus | null
   allTables: TableWithStatus[]
   restaurantId: string
+  restaurantSlug: string
   calls: WaiterCall[]
   onAckCall: (id: string) => Promise<void>
   onClose: () => void
   onMutated?: () => void | Promise<void>
 }
 
-export function TableDrawer({ table, allTables, restaurantId, calls, onAckCall, onClose, onMutated }: TableDrawerProps) {
+export function TableDrawer({ table, allTables, restaurantId, restaurantSlug, calls, onAckCall, onClose, onMutated }: TableDrawerProps) {
   const open = table !== null
+  /** `table` from parent is a new object on every useTables refetch; memoize query inputs so the fetch effect does not re-run. */
+  const mergedLabelsSig = table?.merged_secondary_labels.join('\x1e') ?? ''
+  const orderQueryLabels = useMemo((): string[] | null => {
+    if (!table) return null
+    return [table.label, ...table.merged_secondary_labels]
+  }, [table?.id, table?.label, mergedLabelsSig])
   const [waiterName, setWaiterName] = useState('')
   const [mergeTarget, setMergeTarget] = useState('')
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([])
@@ -90,12 +137,12 @@ export function TableDrawer({ table, allTables, restaurantId, calls, onAckCall, 
   }, [table?.id, table?.status?.waiter_name])
 
   useEffect(() => {
-    if (!table) {
+    if (!orderQueryLabels) {
       setActiveOrders([])
       setActiveOrdersLoading(false)
       return
     }
-    const labels = [table.label, ...table.merged_secondary_labels]
+    const labels = orderQueryLabels
     let cancelled = false
     setActiveOrdersLoading(true)
     setActiveOrders([])
@@ -151,7 +198,7 @@ export function TableDrawer({ table, allTables, restaurantId, calls, onAckCall, 
       cancelled = true
       setActiveOrdersLoading(false)
     }
-  }, [table, restaurantId])
+  }, [orderQueryLabels, restaurantId])
 
   useEffect(() => {
     if (!open) return
@@ -226,7 +273,7 @@ export function TableDrawer({ table, allTables, restaurantId, calls, onAckCall, 
     setSaving(true)
     setSaveError(null)
     const now = new Date().toISOString()
-    const w = await upsertTableStatus(table.id, restaurantId, { waiter_name: null, cleared_at: now })
+    const w = await upsertTableStatus(table.id, restaurantId, { waiter_name: null, cleared_at: now, occupied_since: null })
     if (w.error) {
       setSaveError(w.error.message)
       setSaving(false)
@@ -456,6 +503,17 @@ export function TableDrawer({ table, allTables, restaurantId, calls, onAckCall, 
                   Unmerge
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* QR code */}
+          {table && (
+            <div className="px-5 py-4">
+              <p className="text-body-sm font-semibold text-ink mb-3 flex items-center gap-1.5">
+                <QrCode size={14} className="text-ink-5" />
+                Table QR code
+              </p>
+              <QRCodeSection slug={restaurantSlug} tableLabel={table.label} />
             </div>
           )}
 

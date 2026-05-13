@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useSession } from '@/features/auth/hooks/useSession'
 import { useRestaurantMembership } from '../hooks/useRestaurantMembership'
@@ -23,6 +24,9 @@ function Spinner() {
 }
 
 export default function KitchenPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const view: KitchenView = searchParams.get('view') === 'tables' ? 'tables' : 'orders'
+
   const { user } = useSession()
   const { data: memberships, isLoading: memberLoading } = useRestaurantMembership(user?.id)
 
@@ -35,7 +39,18 @@ export default function KitchenPage() {
 
   const [accepting, setAccepting] = useState<boolean>(true)
   const acceptingRef = useRef(accepting)
-  const [view, setView] = useState<KitchenView>('orders')
+
+  function setView(next: KitchenView) {
+    setSearchParams(
+      prev => {
+        const p = new URLSearchParams(prev)
+        if (next === 'orders') p.delete('view')
+        else p.set('view', 'tables')
+        return p
+      },
+      { replace: true }
+    )
+  }
 
   useEffect(() => {
     if (restaurant?.accepting_orders !== undefined) {
@@ -130,6 +145,7 @@ export default function KitchenPage() {
       ) : (
         <TableFloor
           restaurantId={restaurant.id}
+          restaurantSlug={restaurant.slug}
           calls={calls}
           onAckCall={acknowledgeCall}
         />

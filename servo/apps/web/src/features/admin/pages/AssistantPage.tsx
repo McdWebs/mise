@@ -1,8 +1,10 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { KpiTile } from '../components/KpiTile'
 import { Sk } from '../components/Skeleton'
+import { AssistantMessageContent } from '@/features/guest/components/AssistantMessageContent'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
 
 function startOfToday(): string {
@@ -11,20 +13,47 @@ function startOfToday(): string {
   return d.toISOString()
 }
 
+interface ConvMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
+
 interface Conversation {
   id: string
   created_at: string
-  messages_jsonb: unknown
+  messages_jsonb: ConvMessage[]
 }
 
 interface AssistantPageProps {
   restaurant: AdminRestaurant
 }
 
+const ESCALATION_PHRASES = [
+  "let your server know",
+  "server is happy to help",
+  "team is happy to help",
+  "ask your server",
+  "a member of the team",
+  "couldn't reach the assistant",
+]
+
+function isEscalated(messages: ConvMessage[]): boolean {
+  return messages.some(
+    m => m.role === 'assistant' && ESCALATION_PHRASES.some(p => m.content.toLowerCase().includes(p))
+  )
+}
+
+interface TopQuestion {
+  text: string
+  count: number
+  answer: string
+}
+
 export function AssistantPage({ restaurant }: AssistantPageProps) {
   const since = useMemo(startOfToday, [])
   const queryClient = useQueryClient()
   const key = ['admin-conversations', restaurant.id]
+  const [expandedQ, setExpandedQ] = useState<string | null>(null)
 
   const { data: conversations = [], isLoading } = useQuery<Conversation[]>({
     queryKey: key,
@@ -41,7 +70,6 @@ export function AssistantPage({ restaurant }: AssistantPageProps) {
     staleTime: 0,
   })
 
-  // Realtime: invalidate whenever a conversation is inserted or updated
   useEffect(() => {
     const ch = supabase
       .channel(`assistant-conversations-${restaurant.id}`)
@@ -55,6 +83,28 @@ export function AssistantPage({ restaurant }: AssistantPageProps) {
   }, [restaurant.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const total = conversations.length
+  const escalatedCount = useMemo(
+    () => conversations.filter(c => isEscalated(c.messages_jsonb)).length,
+    [conversations]
+  )
+  const helpedCount = total - escalatedCount
+
+  const topQuestions = useMemo<TopQuestion[]>(() => {
+    const map = new Map<string, { count: number; answer: string }>()
+    for (const conv of conversations) {
+      const msgs = conv.messages_jsonb
+      const q = msgs.find(m => m.role === 'user')?.content?.trim()
+      if (!q) continue
+      const key = q.toLowerCase()
+      const answer = msgs.find((m, i) => i > 0 && m.role === 'assistant')?.content ?? ''
+      if (!map.has(key)) map.set(key, { count: 0, answer })
+      map.get(key)!.count++
+    }
+    return [...map.entries()]
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, 8)
+      .map(([text, { count, answer }]) => ({ text, count, answer }))
+  }, [conversations])
 
   if (isLoading) return <AssistantSkeleton />
 
@@ -79,15 +129,15 @@ export function AssistantPage({ restaurant }: AssistantPageProps) {
         />
         <KpiTile
           label="Helped without staff"
-          value="—"
-          delta="Live in phase 6"
-          spark={Array(12).fill(0)}
+          value={total > 0 ? String(helpedCount) : '—'}
+          delta={total > 0 ? `${Math.round((helpedCount / total) * 100)}% of today` : 'No data yet'}
+          spark={Array(12).fill(0).map((_, i) => (i === 11 ? helpedCount : 0))}
         />
         <KpiTile
           label="Escalated to a person"
-          value="—"
-          delta="Live in phase 6"
-          spark={Array(12).fill(0)}
+          value={total > 0 ? String(escalatedCount) : '—'}
+          delta={total > 0 ? `${Math.round((escalatedCount / total) * 100)}% of today` : 'No data yet'}
+          spark={Array(12).fill(0).map((_, i) => (i === 11 ? escalatedCount : 0))}
         />
       </div>
 
@@ -101,16 +151,44 @@ export function AssistantPage({ restaurant }: AssistantPageProps) {
         </p>
 
         {total === 0 ? (
-          <div className="py-6 text-center">
+          <div className="py-8 text-center">
             <p className="text-body-sm text-ink-6">
-              Top questions will appear here once the assistant is live.
+              Questions will appear here once guests start using the assistant.
             </p>
-            <p className="text-body-sm text-ink-7 mt-1">The AI assistant is wired up in phase 6.</p>
           </div>
         ) : (
-          <p className="text-body-sm text-ink-6">
-            {total} conversation{total !== 1 ? 's' : ''} today. Full question analytics arrive in phase 6.
-          </p>
+          <div className="divide-y divide-paper-3">
+            {topQuestions.map(q => {
+              const isOpen = expandedQ === q.text
+              return (
+                <div key={q.text}>
+                  <button
+                    onClick={() => setExpandedQ(isOpen ? null : q.text)}
+                    className="w-full flex items-center gap-3 py-3 text-left group"
+                  >
+                    <span className="flex-1 text-[14px] text-ink group-hover:text-ink-2 transition-colors line-clamp-2">
+                      {q.text}
+                    </span>
+                    <span className="text-[12px] text-ink-6 shrink-0 tabular-nums">
+                      {q.count}×
+                    </span>
+                    {isOpen
+                      ? <ChevronUp size={14} className="text-ink-6 shrink-0" />
+                      : <ChevronDown size={14} className="text-ink-6 shrink-0" />
+                    }
+                  </button>
+
+                  {isOpen && q.answer && (
+                    <div className="pb-3 pl-0 pr-6">
+                      <div className="bg-paper-2 rounded-[12px_12px_12px_4px] px-3.5 py-2.5 text-[13px] leading-[1.55] text-ink">
+                        <AssistantMessageContent text={q.answer} />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         )}
       </div>
     </>
@@ -145,9 +223,10 @@ function AssistantSkeleton() {
         <Sk className="h-4 w-96 mb-5" />
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3 py-2 border-b border-paper-3 last:border-0">
+            <div key={i} className="flex items-center gap-3 py-3 border-b border-paper-3 last:border-0">
               <Sk className="h-4 flex-1" />
-              <Sk className="h-4 w-10" />
+              <Sk className="h-4 w-6" />
+              <Sk className="h-4 w-4" />
             </div>
           ))}
         </div>

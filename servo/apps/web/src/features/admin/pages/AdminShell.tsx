@@ -1,6 +1,5 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
-import { LogOut, MonitorPlay } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+import { MonitorPlay, UtensilsCrossed } from 'lucide-react'
 import { useSession } from '@/features/auth/hooks/useSession'
 import { useAdminRestaurant } from '../hooks/useAdminRestaurant'
 import { OverviewPage } from './OverviewPage'
@@ -26,6 +25,9 @@ const NAV_INSIGHTS: { id: AdminPage; label: string }[] = [
   { id: 'assistant', label: 'Assistant' },
 ]
 
+/** Guest `?table=` value; numeric labels resolve to `T 1` etc. (see useGuestTable). */
+const GUEST_MENU_DEFAULT_TABLE_PARAM = '1'
+
 function Spinner() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-paper">
@@ -37,10 +39,6 @@ function Spinner() {
 export default function AdminShell() {
   const { user } = useSession()
   const { data: restaurant, isLoading } = useAdminRestaurant(user?.id)
-
-  async function signOut() {
-    await supabase.auth.signOut()
-  }
 
   if (isLoading) return <Spinner />
 
@@ -113,22 +111,23 @@ export default function AdminShell() {
         {/* Footer */}
         <div className="mt-auto px-4 py-4 border-t border-paper-3 space-y-2">
           <a
-            href="/kitchen"
+            href={`${window.location.origin}/r/${restaurant.slug}?table=${encodeURIComponent(GUEST_MENU_DEFAULT_TABLE_PARAM)}`}
             target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-2 text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover"
+            rel="noopener noreferrer"
+            className="flex w-full cursor-pointer items-center gap-2 text-left text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover no-underline"
           >
-            <MonitorPlay size={14} />
+            <UtensilsCrossed size={14} className="shrink-0" aria-hidden />
+            Guest menu
+          </a>
+          <a
+            href={`${window.location.origin}/kitchen`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex w-full cursor-pointer items-center gap-2 text-left text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover no-underline"
+          >
+            <MonitorPlay size={14} className="shrink-0" aria-hidden />
             Kitchen display
           </a>
-          <div className="text-[12px] text-ink-6 truncate">{user?.email}</div>
-          <button
-            onClick={signOut}
-            className="flex items-center gap-2 text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover"
-          >
-            <LogOut size={14} />
-            Sign out
-          </button>
         </div>
       </aside>
 

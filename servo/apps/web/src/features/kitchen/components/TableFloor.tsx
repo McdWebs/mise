@@ -8,6 +8,7 @@ import type { WaiterCall } from '../hooks/useWaiterCalls'
 
 interface TableFloorProps {
   restaurantId: string
+  restaurantSlug: string
   calls: WaiterCall[]
   onAckCall: (id: string) => Promise<void>
 }
@@ -236,7 +237,7 @@ function AddTableCard({
   )
 }
 
-export function TableFloor({ restaurantId, calls, onAckCall }: TableFloorProps) {
+export function TableFloor({ restaurantId, restaurantSlug, calls, onAckCall }: TableFloorProps) {
   const { tables, loading, refetch } = useTables(restaurantId)
   const handleAckCall = useCallback(
     async (id: string) => {
@@ -338,6 +339,7 @@ export function TableFloor({ restaurantId, calls, onAckCall }: TableFloorProps) 
         table={selectedTable}
         allTables={tables}
         restaurantId={restaurantId}
+        restaurantSlug={restaurantSlug}
         calls={selectedCalls}
         onAckCall={handleAckCall}
         onClose={() => setSelectedTableId(null)}

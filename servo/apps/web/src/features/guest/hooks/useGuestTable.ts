@@ -46,6 +46,6 @@ export function useGuestTable(restaurantId: string | undefined, tableLabel: stri
       return null
     },
     enabled: !!restaurantId,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 0,
   })
 }

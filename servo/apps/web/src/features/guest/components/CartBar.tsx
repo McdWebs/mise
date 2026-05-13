@@ -12,7 +12,7 @@ export function CartBar({ itemCount, totalCents, currency, onOpen }: CartBarProp
   if (itemCount === 0) return null
 
   return (
-    <div className="sticky bottom-0 px-4 pb-4 pt-2 z-[6] pointer-events-none">
+    <div className="sticky bottom-0 px-5 pb-4 pt-2 z-[6] pointer-events-none">
       <button
         onClick={onOpen}
         className="w-full pointer-events-auto bg-ink text-paper rounded-[12px] px-[18px] py-3.5 flex items-center justify-between shadow-1 transition-colors duration-hover hover:bg-ink-2 active:scale-[0.98] active:duration-press"

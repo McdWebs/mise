@@ -7,6 +7,8 @@ import { useTableOrders } from '../hooks/useTableOrders'
 import { OrderStatus } from '../components/OrderStatus'
 import type { OrderItem } from '@servo/types'
 
+const BG = { backgroundImage: 'url(/assets/pattern-tablecloth.svg)', backgroundRepeat: 'repeat' as const }
+
 interface OrderItemWithName extends OrderItem {
   itemName: string
 }
@@ -57,15 +59,17 @@ export default function OrderStatusPage() {
   }
 
   return (
-    <div className="w-full max-w-[420px] mx-auto border-x border-paper-3 min-h-dvh">
-      <OrderStatus
-        order={order}
-        items={items}
-        tableLabel={tableLabel}
-        slug={slug ?? ''}
-        currency={restaurant?.currency ?? 'USD'}
-        tableOrders={tableOrders.data ?? []}
-      />
+    <div className="relative min-h-dvh bg-paper" style={BG}>
+      <div className="w-full max-w-[420px] mx-auto">
+        <OrderStatus
+          order={order}
+          items={items}
+          tableLabel={tableLabel}
+          slug={slug ?? ''}
+          currency={restaurant?.currency ?? 'USD'}
+          tableOrders={tableOrders.data ?? []}
+        />
+      </div>
     </div>
   )
 }

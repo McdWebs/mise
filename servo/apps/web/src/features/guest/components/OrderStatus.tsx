@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bell, CheckCircle2, Loader2, PlusCircle } from 'lucide-react'
+import { Bell, Check, CheckCircle2, Loader2, PlusCircle } from 'lucide-react'
 import type { Order, OrderItem } from '@servo/types'
 import type { OrderStage } from '@servo/types'
 import { formatPriceExact } from '../utils/formatPrice'
 import { supabase } from '@/lib/supabase'
+import { notifyKitchenFloorNudge } from '@/features/kitchen/liveChannel'
 import type { TableOrder } from '../hooks/useTableOrders'
 
 interface OrderStatusProps {
@@ -42,20 +43,25 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
   const [helpSent, setHelpSent] = useState(false)
   const [helpLoading, setHelpLoading] = useState(false)
 
-  const currentIdx = STAGE_STEPS.findIndex(s => s.stage === order.stage)
+  /** Index of the active step, or `STAGE_STEPS.length` when every step is complete (e.g. picked up). */
+  const activeStepIndex = (() => {
+    if (order.stage === 'picked_up') return STAGE_STEPS.length
+    const cur = STAGE_STEPS.findIndex(s => s.stage === order.stage)
+    return cur >= 0 ? cur : 0
+  })()
 
   async function callServer() {
     setHelpLoading(true)
     try {
-      await supabase.from('assistance_requests').insert({
-        restaurant_id: order.restaurant_id,
-        table_label: tableLabel,
-        kind: 'call_server',
-        status: 'open',
-      })
+      const { error } = await supabase
+        .from('waiter_calls')
+        .insert({ restaurant_id: order.restaurant_id, table_label: tableLabel })
+      if (error) {
+        console.error(error)
+        return
+      }
+      notifyKitchenFloorNudge(order.restaurant_id)
       setHelpSent(true)
-    } catch {
-      // silently fail — guest sees no error
     } finally {
       setHelpLoading(false)
     }
@@ -64,10 +70,7 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
   const isCancelled = order.stage === 'cancelled'
 
   return (
-    <div
-      className="min-h-dvh bg-paper px-5 py-6"
-      style={{ backgroundImage: 'url(/assets/pattern-tablecloth.svg)', backgroundRepeat: 'repeat' }}
-    >
+    <div className="px-5 py-6 pb-10">
       {/* Stage header */}
       <div className="text-center mb-8">
         <p className="text-overline text-ink-6 uppercase tracking-[0.08em] mb-2">
@@ -81,44 +84,71 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
         </p>
       </div>
 
-      {/* Progress track — only for non-cancelled */}
+      {/* Kitchen timeline (horizontal) — only for non-cancelled */}
       {!isCancelled && (
-        <>
-          <div className="flex items-center gap-2 mb-0">
-            {STAGE_STEPS.map((step, idx) => (
-              <div
-                key={step.stage}
-                className="flex-1 h-1 rounded-pill transition-colors duration-standard"
-                style={{
-                  background:
-                    idx < currentIdx
-                      ? 'var(--ink-3)'       // done — dark grey
-                      : idx === currentIdx
-                      ? 'var(--saffron)'     // active — saffron
-                      : 'var(--paper-3)',    // pending — light
-                }}
-              />
-            ))}
+        <div className="mb-8" aria-label="Order progress" role="list">
+          <div className="flex w-full items-center px-0.5">
+            {STAGE_STEPS.flatMap((step, i) => {
+              const done = i < activeStepIndex
+              const active = i === activeStepIndex && activeStepIndex < STAGE_STEPS.length
+              const pending = !done && !active
+              const joinComplete = i > 0 && activeStepIndex >= i
+
+              const dot = (
+                <div
+                  key={step.stage}
+                  role="listitem"
+                  className={[
+                    'flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-2 transition-colors duration-standard',
+                    done && 'border-ink-3 bg-ink-3',
+                    active && 'border-saffron bg-saffron shadow-[0_0_0_3px_var(--saffron-wash)]',
+                    pending && 'border-paper-4 bg-paper',
+                  ].filter(Boolean).join(' ')}
+                  aria-current={active ? 'step' : undefined}
+                >
+                  {done && <Check className="h-2.5 w-2.5 text-paper" strokeWidth={3} aria-hidden />}
+                </div>
+              )
+
+              if (i === 0) return [dot]
+              return [
+                <div
+                  key={`join-${step.stage}`}
+                  className={[
+                    'mx-1 h-0.5 min-w-[12px] flex-1 rounded-pill transition-colors duration-standard',
+                    joinComplete ? 'bg-ink-3' : 'bg-paper-3',
+                  ].join(' ')}
+                  aria-hidden
+                />,
+                dot,
+              ]
+            })}
           </div>
-          <div className="flex justify-between mt-[-14px] mb-8 px-1">
-            {STAGE_STEPS.map((step, idx) => (
-              <span
-                key={step.stage}
-                className="text-[11px] font-medium"
-                style={{
-                  color: idx === currentIdx ? 'var(--saffron-3)' : 'var(--ink-6)',
-                  fontWeight: idx === currentIdx ? 700 : 500,
-                }}
-              >
-                {step.label}
-              </span>
-            ))}
+          <div className="mt-3 grid grid-cols-3 gap-1">
+            {STAGE_STEPS.map((step, i) => {
+              const done = i < activeStepIndex
+              const active = i === activeStepIndex && activeStepIndex < STAGE_STEPS.length
+              const pending = !done && !active
+              return (
+                <p
+                  key={step.stage}
+                  className={[
+                    'text-center text-[13px] leading-tight transition-colors duration-standard',
+                    done && 'font-medium text-ink',
+                    active && 'font-semibold text-saffron-3',
+                    pending && 'font-medium text-ink-6',
+                  ].filter(Boolean).join(' ')}
+                >
+                  {step.label}
+                </p>
+              )
+            })}
           </div>
-        </>
+        </div>
       )}
 
       {isCancelled && (
-        <div className="mb-6 p-4 bg-ember-wash border border-ember/30 rounded-3 text-center">
+        <div className="mb-6 p-4 bg-ember-wash rounded-3 text-center">
           <p className="text-[14px] text-ember font-medium">
             This order was cancelled. Please speak to a server if you need help.
           </p>
@@ -126,10 +156,10 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
       )}
 
       {/* Order recap */}
-      <div className="bg-paper rounded-3 border border-paper-3 mb-5">
-        <div className="divide-y divide-paper-3">
+      <div className="mb-5">
+        <div className="flex flex-col">
           {items.map((item, i) => (
-            <div key={i} className="flex gap-3 px-4 py-3">
+            <div key={i} className="flex gap-3 py-3 first:pt-0">
               <span className="font-mono font-semibold text-ink-6 w-6 tabular-nums text-[14px]">
                 {item.quantity}×
               </span>
@@ -148,15 +178,15 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
       </div>
 
       {/* Call server */}
-      <div className="flex gap-3 items-center p-4 bg-paper border border-paper-3 rounded-3 mb-5">
-        <div className="w-10 h-10 rounded-full bg-paper-2 flex items-center justify-center text-ink shrink-0">
-          {helpSent ? <CheckCircle2 size={20} className="text-herb" /> : <Bell size={20} />}
+      <div className="flex gap-2.5 items-center px-3.5 py-2.5 bg-paper-2 rounded-3 mb-5">
+        <div className="w-9 h-9 rounded-full bg-paper flex items-center justify-center text-ink shrink-0">
+          {helpSent ? <CheckCircle2 size={18} className="text-herb" /> : <Bell size={18} />}
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="font-display text-[17px] font-[500] text-ink font-optical">
+          <h4 className="font-display text-[15px] font-[500] leading-snug text-ink font-optical">
             {helpSent ? 'Help is on the way' : 'Need something from the floor?'}
           </h4>
-          <p className="text-[13px] text-ink-5 mt-0.5">
+          <p className="text-[12px] leading-snug text-ink-5 mt-0.5">
             {helpSent
               ? 'A server will be over shortly.'
               : 'Tap to ask a server to come to your table.'}
@@ -166,7 +196,7 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
           <button
             onClick={callServer}
             disabled={helpLoading}
-            className="shrink-0 h-[38px] px-3.5 rounded-[10px] border border-[1.5px] border-paper-4 bg-transparent text-ink text-[13px] font-semibold hover:bg-paper-2 transition-colors duration-hover disabled:opacity-50 flex items-center gap-1.5"
+            className="shrink-0 h-9 px-3 rounded-[10px] border border-paper-4 bg-transparent text-ink text-[12px] font-semibold hover:bg-paper transition-colors duration-hover disabled:opacity-50 flex items-center gap-1.5"
           >
             {helpLoading && <Loader2 size={12} className="animate-spin" />}
             Call
@@ -198,9 +228,9 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
               return (
                 <div
                   key={o.id}
-                  className={`bg-paper border rounded-3 overflow-hidden ${isCurrent ? 'border-saffron' : 'border-paper-3'}`}
+                  className={`rounded-3 overflow-hidden ${isCurrent ? 'bg-saffron-wash' : 'bg-paper-2'}`}
                 >
-                  <div className="flex items-center justify-between px-4 py-3 border-b border-paper-3">
+                  <div className="flex items-center justify-between px-4 py-3">
                     <span className="font-mono text-[12px] text-ink-6 tabular-nums">
                       #{o.id.slice(0, 8).toUpperCase()}
                       {isCurrent && <span className="ml-2 text-saffron-3 font-sans font-medium">This order</span>}
@@ -209,9 +239,9 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
                       {badge.label}
                     </span>
                   </div>
-                  <div className="divide-y divide-paper-3">
+                  <div className="flex flex-col">
                     {o.items.map((item, i) => (
-                      <div key={i} className="flex gap-3 px-4 py-2.5">
+                      <div key={i} className="flex gap-3 px-4 py-2.5 first:pt-0 last:pb-3">
                         <span className="font-mono text-[13px] font-semibold text-ink-6 w-6 tabular-nums shrink-0">
                           {item.quantity}×
                         </span>
@@ -222,7 +252,7 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-end px-4 py-2.5 border-t border-paper-3">
+                  <div className="flex justify-end px-4 pb-3 pt-1">
                     <span className="font-mono text-[14px] font-bold text-ink tabular-nums">
                       {formatPriceExact(o.subtotal_cents, currency)}
                     </span>

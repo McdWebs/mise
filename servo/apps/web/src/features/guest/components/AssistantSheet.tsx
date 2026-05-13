@@ -1,23 +1,122 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Loader2, Send, X } from 'lucide-react'
+import { Loader2, Send, X, ShoppingCart, Check } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { AssistantMessageContent } from './AssistantMessageContent'
+import type { CartLineInput } from '../store/cartStore'
+
+interface SuggestedItem {
+  id: string
+  name: string
+  priceCents: number
+}
 
 interface Message {
   role: 'user' | 'assistant'
   content: string
-  citations?: string[]
+  suggestions?: SuggestedItem[]
 }
 
 interface AssistantSheetProps {
   restaurantId: string
   restaurantName: string
   tableLabel: string
+  currency: string
+  onAddLine: (line: CartLineInput) => void
   onClose: () => void
 }
 
 const QUICK_REPLIES = ["What's vegetarian?", "Anything spicy?", "Allergens?", "Wine pairing"]
 
-export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClose }: AssistantSheetProps) {
+/** Extract every **bold** name from an assistant message. */
+function extractBoldNames(text: string): string[] {
+  const matches = text.match(/\*\*([^*]+)\*\*/g) ?? []
+  return [...new Set(matches.map(m => m.replace(/\*\*/g, '').trim()))].filter(Boolean)
+}
+
+/** Look up bold-named items in the menu and return those that are orderable. */
+async function resolveMenuItems(restaurantId: string, names: string[]): Promise<SuggestedItem[]> {
+  if (names.length === 0) return []
+  const { data: cats } = await supabase
+    .from('menu_categories')
+    .select('id')
+    .eq('restaurant_id', restaurantId)
+  const catIds = (cats ?? []).map((c: { id: string }) => c.id)
+  if (catIds.length === 0) return []
+
+  // Run one ilike query per name so partial/case mismatches still resolve
+  const results = await Promise.all(
+    names.map(name =>
+      supabase
+        .from('menu_items')
+        .select('id, name, price_cents')
+        .in('category_id', catIds)
+        .eq('available', true)
+        .ilike('name', name)
+        .limit(1)
+        .maybeSingle()
+    )
+  )
+
+  const seen = new Set<string>()
+  return results
+    .map(r => r.data as { id: string; name: string; price_cents: number } | null)
+    .filter((i): i is { id: string; name: string; price_cents: number } => i !== null && !seen.has(i.id) && !!seen.add(i.id))
+    .map(i => ({ id: i.id, name: i.name, priceCents: i.price_cents }))
+}
+
+function fmtPrice(cents: number, currency: string): string {
+  return new Intl.NumberFormat('he-IL', { style: 'currency', currency, maximumFractionDigits: 0 }).format(cents / 100)
+}
+
+function SuggestionChips({
+  items,
+  currency,
+  onAdd,
+}: {
+  items: SuggestedItem[]
+  currency: string
+  onAdd: (item: SuggestedItem) => void
+}) {
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
+
+  function handleAdd(item: SuggestedItem) {
+    onAdd(item)
+    setAddedIds(prev => new Set(prev).add(item.id))
+    setTimeout(() => {
+      setAddedIds(prev => {
+        const next = new Set(prev)
+        next.delete(item.id)
+        return next
+      })
+    }, 1800)
+  }
+
+  return (
+    <div className="flex flex-wrap gap-1.5 mt-2">
+      {items.map(item => {
+        const added = addedIds.has(item.id)
+        return (
+          <button
+            key={item.id}
+            onClick={() => handleAdd(item)}
+            disabled={added}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-2 border text-[12px] font-medium transition-colors duration-hover ${
+              added
+                ? 'bg-herb-wash border-herb text-herb'
+                : 'bg-paper border-paper-4 text-ink hover:border-ink hover:bg-paper-2'
+            }`}
+          >
+            {added ? <Check size={12} /> : <ShoppingCart size={12} />}
+            <span>{item.name}</span>
+            <span className="text-ink-5 font-normal">{fmtPrice(item.priceCents, currency)}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+export function AssistantSheet({ restaurantId, restaurantName, tableLabel, currency, onAddLine, onClose }: AssistantSheetProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: 'assistant',
@@ -25,9 +124,7 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
     },
   ])
   const [draft, setDraft] = useState('')
-  /** True while the request is in flight (connecting or streaming). */
   const [loading, setLoading] = useState(false)
-  /** True until the first streamed character arrives (model + tools). */
   const [awaitingReply, setAwaitingReply] = useState(false)
   const [open, setOpen] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -69,7 +166,6 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
 
     const apiBase = import.meta.env.VITE_API_BASE_URL
     if (!apiBase) {
-      // Phase 6 not yet wired — show placeholder
       setTimeout(() => {
         setMessages(prev => [
           ...prev,
@@ -94,43 +190,62 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
 
       if (!res.ok || !res.body) throw new Error('No response from assistant.')
 
-      // Stream SSE text/event-stream
       const reader = res.body.getReader()
       const decoder = new TextDecoder()
       let assistantContent = ''
+
+      // Append empty assistant message to stream into
       setMessages(prev => [...prev, { role: 'assistant', content: '' }])
 
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
         const chunk = decoder.decode(value)
-        const lines = chunk.split('\n')
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6)
-            if (data === '[DONE]') break
-            try {
-              const parsed = JSON.parse(data)
-              const delta = parsed.choices?.[0]?.delta?.content ?? parsed.delta ?? ''
-              assistantContent += delta
+
+        for (const line of chunk.split('\n')) {
+          if (!line.startsWith('data: ')) continue
+          const data = line.slice(6)
+          if (data === '[DONE]') break
+          try {
+            const parsed = JSON.parse(data) as {
+              delta?: string
+              type?: string
+              items?: SuggestedItem[]
+            }
+
+            if (parsed.type === 'suggestions' && Array.isArray(parsed.items) && parsed.items.length > 0) {
+              // Attach suggestions to the last assistant message
+              setMessages(prev => {
+                const updated = [...prev]
+                const last = updated[updated.length - 1]
+                if (last?.role === 'assistant') {
+                  updated[updated.length - 1] = { ...last, suggestions: parsed.items }
+                }
+                return updated
+              })
+            } else if (parsed.delta) {
+              assistantContent += parsed.delta
               if (assistantContent.length > 0) setAwaitingReply(false)
               setMessages(prev => {
                 const updated = [...prev]
-                updated[updated.length - 1] = { role: 'assistant', content: assistantContent }
+                const last = updated[updated.length - 1]
+                if (last?.role === 'assistant') {
+                  updated[updated.length - 1] = { ...last, content: assistantContent }
+                }
                 return updated
               })
-            } catch {
-              // non-JSON line, skip
             }
+          } catch {
+            // non-JSON line, skip
           }
         }
       }
     } catch {
       setMessages(prev => {
         const last = prev[prev.length - 1]
-        const fallback = {
-          role: 'assistant' as const,
-          content: 'Couldn\'t reach the assistant right now. A server is happy to help.',
+        const fallback: Message = {
+          role: 'assistant',
+          content: "Couldn't reach the assistant right now. A server is happy to help.",
         }
         if (last?.role === 'assistant' && last.content === '')
           return [...prev.slice(0, -1), fallback]
@@ -139,6 +254,28 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
     } finally {
       setLoading(false)
       setAwaitingReply(false)
+      // Resolve bold-named items from the finished message and attach as chips
+      setMessages(prev => {
+        const last = prev[prev.length - 1]
+        if (!last || last.role !== 'assistant' || !last.content) return prev
+        const boldNames = extractBoldNames(last.content)
+        if (boldNames.length === 0) return prev
+        resolveMenuItems(restaurantId, boldNames).then(suggestions => {
+          if (suggestions.length === 0) return
+          setMessages(current => {
+            const updated = [...current]
+            // find the last assistant message to attach chips to
+            for (let i = updated.length - 1; i >= 0; i--) {
+              if (updated[i].role === 'assistant') {
+                updated[i] = { ...updated[i], suggestions }
+                break
+              }
+            }
+            return updated
+          })
+        })
+        return prev
+      })
     }
   }
 
@@ -191,39 +328,56 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, onClo
         <div className="flex-1 overflow-y-auto flex flex-col gap-3 pb-1">
           {messages.map((m, i) => {
             const isLastAssistant = m.role === 'assistant' && i === messages.length - 1
-            const showConnecting =
-              isLastAssistant && awaitingReply && m.content === ''
+            const showConnecting = isLastAssistant && awaitingReply && m.content === ''
             const showStreaming = isLastAssistant && loading && !awaitingReply && m.content.length > 0
 
             return (
-            <div
-              key={i}
-              className={`max-w-[80%] px-3.5 py-2.5 text-[14px] leading-[1.5] ${
-                m.role === 'assistant'
-                  ? 'bg-paper-2 rounded-[14px_14px_14px_4px] self-start text-ink'
-                  : 'bg-saffron text-paper rounded-[14px_14px_4px_14px] self-end'
-              }`}
-            >
-              {m.role === 'assistant' ? (
-                <>
-                  {m.content ? <AssistantMessageContent text={m.content} /> : null}
-                  {showConnecting && (
-                    <div className="flex items-center gap-2 text-ink-6 min-h-[1.25rem]" aria-live="polite" aria-busy="true">
-                      <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden />
-                      <span className="text-[13px]">Checking the menu…</span>
-                    </div>
+              <div key={i} className={`flex flex-col ${m.role === 'assistant' ? 'items-start' : 'items-end'}`}>
+                <div
+                  className={`max-w-[80%] px-3.5 py-2.5 text-[14px] leading-[1.5] ${
+                    m.role === 'assistant'
+                      ? 'bg-paper-2 rounded-[14px_14px_14px_4px] text-ink'
+                      : 'bg-saffron text-paper rounded-[14px_14px_4px_14px]'
+                  }`}
+                >
+                  {m.role === 'assistant' ? (
+                    <>
+                      {m.content ? <AssistantMessageContent text={m.content} /> : null}
+                      {showConnecting && (
+                        <div className="flex items-center gap-2 text-ink-6 min-h-[1.25rem]" aria-live="polite" aria-busy="true">
+                          <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden />
+                          <span className="text-[13px]">Checking the menu…</span>
+                        </div>
+                      )}
+                      {showStreaming && (
+                        <span
+                          className="inline-block w-0.5 h-[1em] ml-0.5 align-[-0.15em] bg-ink animate-pulse rounded-sm"
+                          aria-hidden
+                        />
+                      )}
+                    </>
+                  ) : (
+                    m.content
                   )}
-                  {showStreaming && (
-                    <span
-                      className="inline-block w-0.5 h-[1em] ml-0.5 align-[-0.15em] bg-ink animate-pulse rounded-sm"
-                      aria-hidden
-                    />
-                  )}
-                </>
-              ) : (
-                m.content
-              )}
-            </div>
+                </div>
+
+                {/* Add-to-cart chips */}
+                {m.role === 'assistant' && m.suggestions && m.suggestions.length > 0 && (
+                  <SuggestionChips
+                    items={m.suggestions}
+                    currency={currency}
+                    onAdd={item =>
+                      onAddLine({
+                        kind: 'menu',
+                        menuItemId: item.id,
+                        name: item.name,
+                        unitPriceCents: item.priceCents,
+                        modifiers: [],
+                      })
+                    }
+                  />
+                )}
+              </div>
             )
           })}
           <div ref={bottomRef} />

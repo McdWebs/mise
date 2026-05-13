@@ -14,10 +14,13 @@ export const KITCHEN_ORDER_CREATED_EVENT = 'order_created' as const
  */
 export function notifyKitchenOrderCreated(restaurantId: string, orderId: string): void {
   const ch = supabase.channel(kitchenLiveChannelName(restaurantId))
-  const cleanup = () => {
-    void supabase.removeChannel(ch)
+  /** Never call `removeChannel` synchronously from subscribe/send callbacks — it can recurse inside Realtime `Push` and overflow the stack. */
+  const scheduleRemoveChannel = () => {
+    window.setTimeout(() => {
+      void supabase.removeChannel(ch)
+    }, 0)
   }
-  const failSafe = window.setTimeout(cleanup, 3000)
+  const failSafe = window.setTimeout(scheduleRemoveChannel, 3000)
 
   ch.subscribe(status => {
     if (status === 'SUBSCRIBED') {
@@ -29,13 +32,13 @@ export function notifyKitchenOrderCreated(restaurantId: string, orderId: string)
         })
         .finally(() => {
           window.clearTimeout(failSafe)
-          cleanup()
+          scheduleRemoveChannel()
         })
       return
     }
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       window.clearTimeout(failSafe)
-      cleanup()
+      scheduleRemoveChannel()
     }
   })
 }
@@ -50,10 +53,12 @@ export const KITCHEN_FLOOR_NUDGE_EVENT = 'floor_nudge' as const
 /** Guest rings waiter → kitchen tables / call strip refetch without relying on postgres_changes. */
 export function notifyKitchenFloorNudge(restaurantId: string): void {
   const ch = supabase.channel(kitchenFloorNudgeChannelName(restaurantId))
-  const cleanup = () => {
-    void supabase.removeChannel(ch)
+  const scheduleRemoveChannel = () => {
+    window.setTimeout(() => {
+      void supabase.removeChannel(ch)
+    }, 0)
   }
-  const failSafe = window.setTimeout(cleanup, 3000)
+  const failSafe = window.setTimeout(scheduleRemoveChannel, 3000)
 
   ch.subscribe(status => {
     if (status === 'SUBSCRIBED') {
@@ -65,13 +70,13 @@ export function notifyKitchenFloorNudge(restaurantId: string): void {
         })
         .finally(() => {
           window.clearTimeout(failSafe)
-          cleanup()
+          scheduleRemoveChannel()
         })
       return
     }
     if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
       window.clearTimeout(failSafe)
-      cleanup()
+      scheduleRemoveChannel()
     }
   })
 }

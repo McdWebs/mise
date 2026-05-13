@@ -35,9 +35,10 @@ interface PlansSectionProps {
   plans: RestaurantPlan[]
   currency: string
   onAddPlan?: (plan: RestaurantPlan) => void
+  onOpenPlan?: (plan: RestaurantPlan) => void
 }
 
-export function PlansSection({ plans, currency, onAddPlan }: PlansSectionProps) {
+export function PlansSection({ plans, currency, onAddPlan, onOpenPlan }: PlansSectionProps) {
   const active = plans.filter(isActiveNow)
   if (active.length === 0) return null
 
@@ -50,7 +51,8 @@ export function PlansSection({ plans, currency, onAddPlan }: PlansSectionProps) 
           return (
             <div
               key={plan.id}
-              className="flex-shrink-0 w-[260px] bg-ink rounded-3 p-4 flex flex-col"
+              className="flex-shrink-0 w-[260px] bg-ink rounded-3 p-4 flex flex-col cursor-pointer"
+              onClick={() => onOpenPlan?.(plan)}
             >
               {/* Badge + price row */}
               <div className="flex items-center justify-between mb-3">
@@ -95,7 +97,7 @@ export function PlansSection({ plans, currency, onAddPlan }: PlansSectionProps) 
               {onAddPlan && (
                 <button
                   type="button"
-                  onClick={() => onAddPlan(plan)}
+                  onClick={e => { e.stopPropagation(); onAddPlan(plan) }}
                   className="mt-3 w-full h-10 rounded-2 bg-saffron text-paper text-[13px] font-semibold transition-colors duration-hover hover:bg-saffron-2 active:scale-[0.98] active:duration-press"
                 >
                   Add plan to order

@@ -20,6 +20,8 @@ import { AssistantSheet } from '../components/AssistantSheet'
 import { PlansSection } from '../components/PlansSection'
 import { usePlans } from '../hooks/usePlans'
 import { useTableOrders } from '../hooks/useTableOrders'
+import type { RestaurantPlan } from '../hooks/usePlans'
+import { PlanSheet } from '../components/PlanSheet'
 import { TableOrdersSheet } from '../components/TableOrdersSheet'
 import type { MenuItem } from '@servo/types'
 
@@ -59,6 +61,7 @@ export default function GuestMenuPage() {
   const [enteredMenuThisMount, setEnteredMenuThisMount] = useState(false)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [openItem, setOpenItem] = useState<MenuItem | null>(null)
+  const [openPlan, setOpenPlan] = useState<RestaurantPlan | null>(null)
   const [cartOpen, setCartOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const [submitting, setSubmitting] = useState(false)
@@ -144,6 +147,26 @@ export default function GuestMenuPage() {
     } finally {
       setSubmitting(false)
     }
+  }
+
+  function handleAddPlan(plan: RestaurantPlan) {
+    addLine(restaurantId, {
+      kind: 'plan',
+      planId: plan.id,
+      name: plan.title,
+      unitPriceCents: plan.price_cents,
+      detailLines: [...plan.includes],
+      modifiers: [],
+    })
+  }
+
+  const allMenuItems: MenuItem[] = categories.flatMap(cat => cat.menu_items)
+
+  function getPlanIncludedItems(plan: RestaurantPlan) {
+    return plan.includes.map(label => ({
+      label,
+      menuItem: allMenuItems.find(item => item.name === label),
+    }))
   }
 
   function handleCallWaiter() {
@@ -236,6 +259,10 @@ export default function GuestMenuPage() {
             onEnter={() => {
               persistGuestCoverDismissed(restaurant.id, guestTable.id, guestTable.cleared_at)
               setEnteredMenuThisMount(true)
+              void supabase.rpc('mark_table_occupied', {
+                p_table_id: guestTable.id,
+                p_restaurant_id: restaurant.id,
+              })
             }}
           />
         </div>
@@ -286,16 +313,8 @@ export default function GuestMenuPage() {
         <PlansSection
           plans={plans}
           currency={restaurant.currency}
-          onAddPlan={plan =>
-            addLine(restaurantId, {
-              kind: 'plan',
-              planId: plan.id,
-              name: plan.title,
-              unitPriceCents: plan.price_cents,
-              detailLines: [...plan.includes],
-              modifiers: [],
-            })
-          }
+          onAddPlan={handleAddPlan}
+          onOpenPlan={setOpenPlan}
         />
 
         <div className="pb-4">
@@ -323,14 +342,14 @@ export default function GuestMenuPage() {
             ))
           )}
         </div>
-      </div>
 
-      <CartBar
-        itemCount={totalItems}
-        totalCents={totalCents}
-        currency={restaurant.currency}
-        onOpen={() => setCartOpen(true)}
-      />
+        <CartBar
+          itemCount={totalItems}
+          totalCents={totalCents}
+          currency={restaurant.currency}
+          onOpen={() => setCartOpen(true)}
+        />
+      </div>
 
       {/* Call waiter FAB */}
       <button
@@ -368,6 +387,19 @@ export default function GuestMenuPage() {
         />
       )}
 
+      {openPlan && (
+        <PlanSheet
+          plan={openPlan}
+          currency={restaurant.currency}
+          includedItems={getPlanIncludedItems(openPlan)}
+          onClose={() => setOpenPlan(null)}
+          onAddPlan={plan => {
+            handleAddPlan(plan)
+            setOpenPlan(null)
+          }}
+        />
+      )}
+
       {cartOpen && (
         <CartSheet
           restaurantId={restaurantId}
@@ -392,6 +424,8 @@ export default function GuestMenuPage() {
           restaurantId={restaurantId}
           restaurantName={restaurant.name}
           tableLabel={tableLabel}
+          currency={restaurant.currency}
+          onAddLine={line => addLine(restaurantId, line)}
           onClose={() => setAiOpen(false)}
         />
       )}

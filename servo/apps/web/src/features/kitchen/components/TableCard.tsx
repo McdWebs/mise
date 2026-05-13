@@ -14,7 +14,7 @@ interface TableCardProps {
 
 export function TableCard({ table, onClick }: TableCardProps) {
   const isMergedSecondary = !!table.status?.merged_into
-  const isOccupied = table.active_order_count > 0
+  const isOccupied = !!table.status?.occupied_since || table.active_order_count > 0 || table.has_session_order
   const needsWaiter = table.has_pending_call
 
   let borderClass = 'border-ink-3 hover:border-ink-5'

@@ -25,12 +25,15 @@ export interface TableStatus {
   notes: string | null
   updated_at: string
   cleared_at: string | null
+  occupied_since: string | null
 }
 
 export interface TableWithStatus extends Table {
   status: TableStatus | null
   active_order_count: number
   active_order_stages: Record<string, number>
+  /** True if any order exists for this table in the current session (any stage, including done). */
+  has_session_order: boolean
   has_pending_call: boolean
   merged_secondary_ids: string[]
   merged_secondary_labels: string[]
@@ -47,7 +50,7 @@ interface RawTableRow {
   table_status: TableStatus | TableStatus[] | null
 }
 
-type TableStatusPatch = { waiter_name?: string | null; merged_into?: string | null; notes?: string | null; cleared_at?: string | null }
+type TableStatusPatch = { waiter_name?: string | null; merged_into?: string | null; notes?: string | null; cleared_at?: string | null; occupied_since?: string | null }
 
 function embeddedTableStatus(row: RawTableRow): TableStatus | null {
   const e = row.table_status
@@ -77,6 +80,7 @@ export async function upsertTableStatus(
   if ('merged_into' in patch) updates.merged_into = patch.merged_into
   if ('notes' in patch) updates.notes = patch.notes
   if ('cleared_at' in patch) updates.cleared_at = patch.cleared_at
+  if ('occupied_since' in patch) updates.occupied_since = patch.occupied_since
 
   if (existing) {
     const { error } = await supabase.from('table_status').update(updates).eq('table_id', tableId)
@@ -91,6 +95,7 @@ export async function upsertTableStatus(
     merged_into: 'merged_into' in patch ? patch.merged_into : null,
     notes: 'notes' in patch ? patch.notes ?? null : null,
     cleared_at: 'cleared_at' in patch ? patch.cleared_at ?? null : null,
+    occupied_since: 'occupied_since' in patch ? patch.occupied_since ?? null : null,
     updated_at,
   }
   const { error } = await supabase.from('table_status').insert(insert)
@@ -108,7 +113,7 @@ export function useTables(restaurantId: string | undefined) {
       return
     }
 
-    const [tablesRes, ordersRes, callsRes] = await Promise.all([
+    const [tablesRes, ordersRes, allOrdersRes, callsRes] = await Promise.all([
       supabase
         .from('tables')
         .select(TABLES_WITH_STATUS)
@@ -120,6 +125,13 @@ export function useTables(restaurantId: string | undefined) {
         .select('table_label, stage')
         .eq('restaurant_id', restaurantId)
         .in('stage', ['received', 'cooking', 'ready']),
+      // All orders in the last 48 h — used only to determine if a table has had any
+      // activity in the current session (even when all orders are done).
+      supabase
+        .from('orders')
+        .select('table_label, created_at')
+        .eq('restaurant_id', restaurantId)
+        .gte('created_at', new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()),
       supabase
         .from('waiter_calls')
         .select('table_label')
@@ -129,6 +141,7 @@ export function useTables(restaurantId: string | undefined) {
 
     const tablesData = tablesRes.data
     const ordersData = ordersRes.data
+    const allOrdersData = allOrdersRes.data
     const callsData = callsRes.data
 
     const pendingLabels = new Set(((callsData ?? []) as { table_label: string }[]).map(c => c.table_label))
@@ -139,10 +152,21 @@ export function useTables(restaurantId: string | undefined) {
       stagesByLabel[o.table_label][o.stage] = (stagesByLabel[o.table_label][o.stage] ?? 0) + 1
     }
 
+    // Group all recent orders by label for session-occupancy detection
+    const recentOrdersByLabel: Record<string, { created_at: string }[]> = {}
+    for (const o of ((allOrdersData ?? []) as { table_label: string; created_at: string }[])) {
+      ;(recentOrdersByLabel[o.table_label] ??= []).push({ created_at: o.created_at })
+    }
+
     const rows: TableWithStatus[] = ((tablesData ?? []) as unknown as RawTableRow[]).map(row => {
       const status = embeddedTableStatus(row)
       const stages = stagesByLabel[row.label] ?? {}
       const count = Object.values(stages).reduce((s, n) => s + n, 0)
+      const recentOrders = recentOrdersByLabel[row.label] ?? []
+      const clearedAt = status?.cleared_at ?? null
+      const hasSessionOrder = recentOrders.some(o =>
+        clearedAt === null || o.created_at > clearedAt
+      )
       return {
         id: row.id,
         restaurant_id: row.restaurant_id,
@@ -153,6 +177,7 @@ export function useTables(restaurantId: string | undefined) {
         status,
         active_order_count: count,
         active_order_stages: { ...stages },
+        has_session_order: hasSessionOrder,
         has_pending_call: pendingLabels.has(row.label),
         merged_secondary_ids: [],
         merged_secondary_labels: [],
@@ -171,6 +196,7 @@ export function useTables(restaurantId: string | undefined) {
         primary.active_order_count += cnt
       }
       if (row.has_pending_call) primary.has_pending_call = true
+      if (row.has_session_order) primary.has_session_order = true
     }
 
     setTables(rows)
