@@ -226,7 +226,7 @@ export function ItemEditDrawer({ open, categoryId, categoryName, currency, item,
         onClick={onClose}
       />
       <div
-        className={`fixed top-0 right-0 h-full w-[480px] z-50 bg-paper flex flex-col shadow-2 transition-transform duration-standard ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-full w-full sm:w-[480px] z-50 bg-paper flex flex-col shadow-2 transition-transform duration-standard ${open ? 'translate-x-0' : 'translate-x-full'}`}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}

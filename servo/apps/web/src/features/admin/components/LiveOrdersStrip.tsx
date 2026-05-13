@@ -27,10 +27,10 @@ export function LiveOrdersStrip({ restaurantId }: LiveOrdersStripProps) {
   }
 
   return (
-    <div className="flex flex-col">
+    <div className="overflow-x-auto">
       {/* Header row */}
       <div
-        className="grid gap-4 py-3 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest"
+        className="grid gap-4 py-3 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest min-w-[480px]"
         style={{ gridTemplateColumns: '60px 1fr 110px 90px 80px' }}
       >
         <span>Table</span>
@@ -43,7 +43,7 @@ export function LiveOrdersStrip({ restaurantId }: LiveOrdersStripProps) {
       {live.map(order => (
         <div
           key={order.id}
-          className="grid gap-4 py-2.5 border-b border-paper-3 items-center text-body-sm last:border-b-0"
+          className="grid gap-4 py-2.5 border-b border-paper-3 items-center text-body-sm last:border-b-0 min-w-[480px]"
           style={{ gridTemplateColumns: '60px 1fr 110px 90px 80px' }}
         >
           <span className="font-mono font-bold text-ink">{order.table_label}</span>

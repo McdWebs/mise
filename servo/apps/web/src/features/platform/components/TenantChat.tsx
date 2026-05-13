@@ -81,7 +81,7 @@ export function TenantChat({ restaurantId, restaurantName, onUnreadChange }: Ten
         { event: 'INSERT', schema: 'public', table: 'support_messages', filter: `restaurant_id=eq.${restaurantId}` },
         async (payload) => {
           const msg = payload.new as SupportMessage
-          setMessages(prev => [...prev, msg])
+          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
           if (msg.sender_role === 'owner' && !msg.read_at) {
             await supabase
               .from('support_messages')
@@ -105,7 +105,8 @@ export function TenantChat({ restaurantId, restaurantName, onUnreadChange }: Ten
       .select()
       .single()
     if (!error && data) {
-      setMessages(prev => [...prev, data as SupportMessage])
+      const inserted = data as SupportMessage
+      setMessages(prev => prev.some(m => m.id === inserted.id) ? prev : [...prev, inserted])
     }
     setSending(false)
   }

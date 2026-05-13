@@ -62,9 +62,9 @@ export function OverviewPage({ restaurant }: OverviewPageProps) {
 
   return (
     <>
-      <div className="flex items-baseline justify-between mb-6">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-6">
         <div>
-          <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
+          <h1 className="font-display text-[28px] sm:text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
             Service overview
           </h1>
           <div className="text-body-sm text-ink-6 mt-0.5">Today · {today}</div>
@@ -72,7 +72,7 @@ export function OverviewPage({ restaurant }: OverviewPageProps) {
       </div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-4 gap-3 mb-7">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
         <KpiTile
           label="Orders today"
           value={String(orderCount)}
@@ -159,9 +159,10 @@ function TablesSection({ tables, tableStats, activeTableLabels, currency }: Tabl
         </span>
       </div>
 
+      <div className="overflow-x-auto">
       {/* Column header */}
       <div
-        className="grid gap-4 px-5 py-2.5 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest"
+        className="grid gap-4 px-5 py-2.5 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest min-w-[560px]"
         style={{ gridTemplateColumns: '80px 1fr 140px 140px 60px 90px' }}
       >
         <span>Table</span>
@@ -219,7 +220,7 @@ function TablesSection({ tables, tableStats, activeTableLabels, currency }: Tabl
         return (
           <div
             key={table.id}
-            className="grid gap-4 px-5 py-3 border-b border-paper-3 last:border-b-0 items-center text-body-sm"
+            className="grid gap-4 px-5 py-3 border-b border-paper-3 last:border-b-0 items-center text-body-sm min-w-[560px]"
             style={{ gridTemplateColumns: '80px 1fr 140px 140px 60px 90px' }}
           >
             <span className="font-mono font-bold text-ink">{table.label}</span>
@@ -243,6 +244,7 @@ function TablesSection({ tables, tableStats, activeTableLabels, currency }: Tabl
           </div>
         )
       })}
+      </div>{/* end overflow-x-auto */}
     </div>
   )
 }
@@ -257,7 +259,7 @@ function OverviewSkeleton() {
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-3 mb-7">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-paper border border-paper-3 rounded-3 p-4 space-y-3">
             <Sk className="h-3 w-24" />
@@ -275,9 +277,9 @@ function OverviewSkeleton() {
       <div className="bg-paper border border-paper-3 rounded-3 p-5 mb-6">
         <Sk className="h-6 w-32 mb-2" />
         <Sk className="h-3 w-20 mb-5" />
-        <div className="space-y-3">
+        <div className="overflow-x-auto">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="grid gap-4 items-center" style={{ gridTemplateColumns: '60px 1fr 110px 90px 80px' }}>
+            <div key={i} className="grid gap-4 py-2.5 border-b border-paper-3 last:border-b-0 items-center min-w-[480px]" style={{ gridTemplateColumns: '60px 1fr 110px 90px 80px' }}>
               <Sk className="h-4 w-full" />
               <Sk className="h-4 w-3/4" />
               <Sk className="h-5 w-20 rounded-pill" />
@@ -293,19 +295,21 @@ function OverviewSkeleton() {
           <Sk className="h-6 w-24" />
           <Sk className="h-4 w-32" />
         </div>
-        <div className="px-5 py-2.5 border-b border-paper-3">
-          <Sk className="h-3 w-full" />
-        </div>
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="grid gap-4 px-5 py-3 border-b border-paper-3 last:border-b-0 items-center" style={{ gridTemplateColumns: '80px 1fr 140px 140px 60px 90px' }}>
-            <Sk className="h-4 w-12" />
-            <Sk className="h-4 w-24" />
-            <Sk className="h-4 w-20" />
-            <Sk className="h-4 w-16" />
-            <Sk className="h-4 w-8" />
-            <Sk className="h-4 w-14 ml-auto" />
+        <div className="overflow-x-auto">
+          <div className="px-5 py-2.5 border-b border-paper-3 min-w-[560px]">
+            <Sk className="h-3 w-full" />
           </div>
-        ))}
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="grid gap-4 px-5 py-3 border-b border-paper-3 last:border-b-0 items-center min-w-[560px]" style={{ gridTemplateColumns: '80px 1fr 140px 140px 60px 90px' }}>
+              <Sk className="h-4 w-12" />
+              <Sk className="h-4 w-24" />
+              <Sk className="h-4 w-20" />
+              <Sk className="h-4 w-16" />
+              <Sk className="h-4 w-8" />
+              <Sk className="h-4 w-14 ml-auto" />
+            </div>
+          ))}
+        </div>
       </div>
     </>
   )

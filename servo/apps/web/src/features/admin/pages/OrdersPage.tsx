@@ -58,9 +58,9 @@ export function OrdersPage({ restaurant }: OrdersPageProps) {
 
   return (
     <>
-      <div className="flex items-baseline justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between mb-6">
         <div>
-          <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">Orders</h1>
+          <h1 className="font-display text-[28px] sm:text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">Orders</h1>
           <div className="text-body-sm text-ink-6 mt-0.5">
             {rangeLabel} · {orders.length} order{orders.length !== 1 ? 's' : ''}
           </div>
@@ -85,9 +85,10 @@ export function OrdersPage({ restaurant }: OrdersPageProps) {
       </div>
 
       <div className="bg-paper border border-paper-3 rounded-3 overflow-hidden">
+        <div className="overflow-x-auto">
         {/* Table header */}
         <div
-          className="grid gap-4 px-5 py-3 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest"
+          className="grid gap-4 px-5 py-3 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest min-w-[540px]"
           style={{ gridTemplateColumns: '80px 60px 1fr 120px 100px 80px' }}
         >
           <span>Time</span>
@@ -101,7 +102,7 @@ export function OrdersPage({ restaurant }: OrdersPageProps) {
         {isLoading ? (
           <div className="divide-y divide-paper-3">
             {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="grid gap-4 px-5 py-3.5 items-center" style={{ gridTemplateColumns: '80px 60px 1fr 120px 100px 80px' }}>
+              <div key={i} className="grid gap-4 px-5 py-3.5 items-center min-w-[540px]" style={{ gridTemplateColumns: '80px 60px 1fr 120px 100px 80px' }}>
                 <Sk className="h-4 w-12" />
                 <Sk className="h-4 w-8" />
                 <Sk className="h-4 w-4/5" />
@@ -119,7 +120,7 @@ export function OrdersPage({ restaurant }: OrdersPageProps) {
           orders.map(order => (
             <div
               key={order.id}
-              className="grid gap-4 px-5 py-3 border-b border-paper-3 items-center text-body-sm last:border-b-0"
+              className="grid gap-4 px-5 py-3 border-b border-paper-3 items-center text-body-sm last:border-b-0 min-w-[540px]"
               style={{ gridTemplateColumns: '80px 60px 1fr 120px 100px 80px' }}
             >
               <span className="font-mono text-[12px] text-ink-6">
@@ -137,6 +138,7 @@ export function OrdersPage({ restaurant }: OrdersPageProps) {
             </div>
           ))
         )}
+        </div>{/* end overflow-x-auto */}
       </div>
     </>
   )

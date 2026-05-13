@@ -35,7 +35,7 @@ interface SettingsPageProps {
 }
 
 const inputClass =
-  'w-full max-w-[360px] px-3 py-2.5 border-[1.5px] border-paper-4 rounded-2 text-body text-ink bg-paper focus-visible:outline-none focus-visible:border-saffron transition-[border-color] duration-standard'
+  'w-full sm:max-w-[360px] px-3 py-2.5 border-[1.5px] border-paper-4 rounded-2 text-body text-ink bg-paper focus-visible:outline-none focus-visible:border-saffron transition-[border-color] duration-standard'
 
 function SettingRow({
   label,
@@ -52,9 +52,9 @@ function SettingRow({
 }) {
   return (
     <div
-      className={`grid border-b border-paper-3 last:border-b-0 ${
-        alignStart ? 'items-start' : 'items-center'
-      } ${compact ? 'gap-4 py-2.5' : 'gap-6 py-4'}`}
+      className={`flex flex-col gap-2 sm:grid border-b border-paper-3 last:border-b-0 ${
+        alignStart ? 'sm:items-start' : 'sm:items-center'
+      } ${compact ? 'sm:gap-4 py-2.5' : 'sm:gap-6 py-4'}`}
       style={{ gridTemplateColumns: '240px 1fr' }}
     >
       <div className="min-w-0">
@@ -144,9 +144,9 @@ export function SettingsPage({ restaurant }: SettingsPageProps) {
 
   return (
     <>
-      <div className="flex items-baseline justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between mb-6">
         <div>
-          <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
+          <h1 className="font-display text-[28px] sm:text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
             Venue settings
           </h1>
           <div className="text-body-sm text-ink-6 mt-0.5">
@@ -156,7 +156,7 @@ export function SettingsPage({ restaurant }: SettingsPageProps) {
         <button
           onClick={save}
           disabled={saving}
-          className="px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover disabled:opacity-50 active:scale-[0.98] active:duration-press"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover disabled:opacity-50 active:scale-[0.98] active:duration-press"
         >
           {saved ? 'Saved' : saving ? 'Saving…' : 'Save changes'}
         </button>
@@ -181,17 +181,17 @@ export function SettingsPage({ restaurant }: SettingsPageProps) {
         </SettingRow>
 
         <SettingRow label="Public link & QR" description="Stable URL guests scan or visit.">
-          <div className="flex items-center gap-4 p-4 bg-paper-2 rounded-3 max-w-[460px]">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center p-4 bg-paper-2 rounded-3 sm:max-w-[460px]">
             <QRCodeSVG value={guestUrl} size={64} className="shrink-0 rounded-1" />
-            <div className="min-w-0">
-              <div className="font-mono text-[13px] text-ink truncate">{guestUrl}</div>
+            <div className="min-w-0 flex-1">
+              <div className="font-mono text-[13px] text-ink break-all sm:truncate">{guestUrl}</div>
               <div className="text-body-sm text-ink-6 mt-0.5">
                 Share, print, or download PDF for table tents
               </div>
             </div>
             <button
               onClick={copyLink}
-              className="ml-auto shrink-0 px-3 py-2 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover"
+              className="sm:ml-auto shrink-0 w-full sm:w-auto px-3 py-2 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover"
             >
               {copied ? 'Copied!' : 'Copy link'}
             </button>
@@ -202,7 +202,7 @@ export function SettingsPage({ restaurant }: SettingsPageProps) {
           <select
             value={currency}
             onChange={e => setCurrency(e.target.value)}
-            className="w-[260px] px-3 py-2.5 border-[1.5px] border-paper-4 rounded-2 text-body text-ink bg-paper focus-visible:outline-none focus-visible:border-saffron transition-[border-color] duration-standard appearance-none cursor-pointer"
+            className="w-full sm:w-[260px] px-3 py-2.5 border-[1.5px] border-paper-4 rounded-2 text-body text-ink bg-paper focus-visible:outline-none focus-visible:border-saffron transition-[border-color] duration-standard appearance-none cursor-pointer"
           >
             {CURRENCIES.map(c => (
               <option key={c.code} value={c.code}>{c.label}</option>

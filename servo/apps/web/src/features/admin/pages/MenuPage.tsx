@@ -47,31 +47,31 @@ export function MenuPage({ restaurant }: MenuPageProps) {
 
   return (
     <>
-      <div className="flex items-baseline justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between mb-6">
         <div>
-          <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">Menu</h1>
+          <h1 className="font-display text-[28px] sm:text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">Menu</h1>
           <div className="text-body-sm text-ink-6 mt-0.5">
-            Edit categories, items, prices, and availability. Drag rows to reorder.
+            Edit categories, items, prices, and availability.
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           <button
             onClick={() => setImportOpen(true)}
-            className="px-4 py-2.5 rounded-2 border border-paper-4 bg-paper text-ink text-body font-semibold hover:bg-paper-2 transition-colors duration-hover"
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-2 border border-paper-4 bg-paper text-ink text-body font-semibold hover:bg-paper-2 transition-colors duration-hover"
           >
             Import from file
           </button>
           <button
             onClick={() => setEditingItem(null)}
-            className="px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover active:scale-[0.98] active:duration-press"
+            className="flex-1 sm:flex-none px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover active:scale-[0.98] active:duration-press"
           >
             + New item
           </button>
         </div>
       </div>
 
-      <div className="bg-paper border border-paper-3 rounded-3 p-5">
-        <div className="grid gap-5" style={{ gridTemplateColumns: '220px 1fr' }}>
+      <div className="bg-paper border border-paper-3 rounded-3 p-4 sm:p-5">
+        <div className="flex flex-col gap-5 sm:grid" style={{ gridTemplateColumns: '220px 1fr' }}>
           {/* Category list */}
           <MenuCategoryList
             categories={categories}
@@ -131,10 +131,10 @@ function MenuSkeleton() {
         <Sk className="h-10 w-28 rounded-2" />
       </div>
 
-      <div className="bg-paper border border-paper-3 rounded-3 p-5">
-        <div className="grid gap-5" style={{ gridTemplateColumns: '220px 1fr' }}>
+      <div className="bg-paper border border-paper-3 rounded-3 p-4 sm:p-5">
+        <div className="flex flex-col gap-5 sm:grid" style={{ gridTemplateColumns: '220px 1fr' }}>
           {/* Category list */}
-          <div className="space-y-1.5 border-r border-paper-3 pr-5">
+          <div className="space-y-1.5 sm:border-r sm:border-paper-3 sm:pr-5">
             {Array.from({ length: 5 }).map((_, i) => (
               <Sk key={i} className="h-9 w-full rounded-2" />
             ))}

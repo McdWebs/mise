@@ -193,7 +193,7 @@ export function SupportPage({ restaurant }: SupportPageProps) {
         { event: 'INSERT', schema: 'public', table: 'support_messages', filter: `ticket_id=eq.${selectedId}` },
         async (payload) => {
           const msg = payload.new as SupportMessage
-          setMessages(prev => [...prev, msg])
+          setMessages(prev => prev.some(m => m.id === msg.id) ? prev : [...prev, msg])
           // Mark platform reply as read immediately
           if (msg.sender_role === 'platform' && !msg.read_at) {
             await supabase
@@ -247,7 +247,8 @@ export function SupportPage({ restaurant }: SupportPageProps) {
       .select()
       .single()
     if (!error && data) {
-      setMessages(prev => [...prev, data as SupportMessage])
+      const inserted = data as SupportMessage
+      setMessages(prev => prev.some(m => m.id === inserted.id) ? prev : [...prev, inserted])
     }
     setSending(false)
     textareaRef.current?.focus()
@@ -271,19 +272,22 @@ export function SupportPage({ restaurant }: SupportPageProps) {
   if (view === 'list') {
     return (
       <div className="flex flex-col h-[calc(100dvh-56px)]">
-        <div className="shrink-0 mb-5 flex items-end justify-between">
-          <div>
-            <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">Support</h1>
-            <div className="text-body-sm text-ink-6 mt-0.5">
-              Contact the Servo team — we typically reply within a few hours.
-            </div>
-          </div>
+        <div className="shrink-0 mb-5 grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 md:gap-y-0 md:items-end">
+          <h1 className="col-start-1 row-start-1 min-w-0 self-start font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
+            Support
+          </h1>
           <button
+            type="button"
             onClick={() => setView('new')}
-            className="px-4 py-2 rounded-pill bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover"
+            aria-label="Open new ticket"
+            className="col-start-2 row-start-1 self-start shrink-0 px-4 py-2 rounded-pill bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover md:self-end md:row-span-2"
           >
-            Open new ticket
+            <span className="md:hidden">New</span>
+            <span className="hidden md:inline">Open new ticket</span>
           </button>
+          <div className="col-span-2 md:col-span-1 row-start-2 min-w-0 text-body-sm text-ink-6 md:mt-0.5">
+            Contact the Servo team — we typically reply within a few hours.
+          </div>
         </div>
 
         {restaurant.suspended && (

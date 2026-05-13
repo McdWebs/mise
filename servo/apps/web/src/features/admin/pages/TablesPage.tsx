@@ -53,13 +53,11 @@ export function TablesPage({ restaurant }: TablesPageProps) {
 
   return (
     <>
-      <div className="flex items-baseline justify-between mb-6">
-        <div>
-          <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
-            Tables
-          </h1>
-          <div className="text-body-sm text-ink-6 mt-0.5">Today · {today}</div>
-        </div>
+      <div className="mb-6">
+        <h1 className="font-display text-[28px] sm:text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
+          Tables
+        </h1>
+        <div className="text-body-sm text-ink-6 mt-0.5">Today · {today}</div>
       </div>
 
       {tables.length === 0 ? (
@@ -72,7 +70,7 @@ export function TablesPage({ restaurant }: TablesPageProps) {
       ) : (
         <>
           {/* KPI row */}
-          <div className="grid grid-cols-4 gap-3 mb-7">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
             <KpiCard label="Total tables" value={String(tables.length)} />
             <KpiCard
               label="Occupied"
@@ -101,9 +99,10 @@ export function TablesPage({ restaurant }: TablesPageProps) {
               </span>
             </div>
 
+            <div className="overflow-x-auto">
             {/* Column headers */}
             <div
-              className="grid gap-4 px-5 py-2.5 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest"
+              className="grid gap-4 px-5 py-2.5 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest min-w-[640px]"
               style={{ gridTemplateColumns: '80px 60px 1fr 140px 140px 60px 90px' }}
             >
               <span>Table</span>
@@ -159,7 +158,7 @@ export function TablesPage({ restaurant }: TablesPageProps) {
               return (
                 <div
                   key={table.id}
-                  className={`grid gap-4 px-5 py-3.5 border-b border-paper-3 last:border-b-0 items-center text-body-sm ${needsWaiter ? 'bg-ember-wash' : ''}`}
+                  className={`grid gap-4 px-5 py-3.5 border-b border-paper-3 last:border-b-0 items-center text-body-sm min-w-[640px] ${needsWaiter ? 'bg-ember-wash' : ''}`}
                   style={{ gridTemplateColumns: '80px 60px 1fr 140px 140px 60px 90px' }}
                 >
                   <span className="font-mono font-bold text-ink">{table.label}</span>
@@ -185,6 +184,7 @@ export function TablesPage({ restaurant }: TablesPageProps) {
                 </div>
               )
             })}
+            </div>{/* /overflow-x-auto */}
           </div>
         </>
       )}
@@ -221,14 +221,12 @@ function KpiCard({
 function TablesSkeleton() {
   return (
     <>
-      <div className="flex items-baseline justify-between mb-6">
-        <div className="space-y-2">
-          <Sk className="h-8 w-32" />
-          <Sk className="h-4 w-40" />
-        </div>
+      <div className="mb-6 space-y-2">
+        <Sk className="h-8 w-32" />
+        <Sk className="h-4 w-40" />
       </div>
 
-      <div className="grid grid-cols-4 gap-3 mb-7">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-paper border border-paper-3 rounded-3 p-4 space-y-3">
             <Sk className="h-3 w-24" />
@@ -242,24 +240,26 @@ function TablesSkeleton() {
           <Sk className="h-6 w-16" />
           <Sk className="h-4 w-32" />
         </div>
-        <div className="px-5 py-2.5 border-b border-paper-3">
-          <Sk className="h-3 w-full" />
-        </div>
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="grid gap-4 px-5 py-3.5 border-b border-paper-3 last:border-b-0 items-center"
-            style={{ gridTemplateColumns: '80px 60px 1fr 140px 140px 60px 90px' }}
-          >
-            <Sk className="h-4 w-10" />
-            <Sk className="h-4 w-6" />
-            <Sk className="h-4 w-24" />
-            <Sk className="h-4 w-20" />
-            <Sk className="h-4 w-10" />
-            <Sk className="h-4 w-6" />
-            <Sk className="h-4 w-14 ml-auto" />
+        <div className="overflow-x-auto">
+          <div className="px-5 py-2.5 border-b border-paper-3 min-w-[640px]">
+            <Sk className="h-3 w-full" />
           </div>
-        ))}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="grid gap-4 px-5 py-3.5 border-b border-paper-3 last:border-b-0 items-center min-w-[640px]"
+              style={{ gridTemplateColumns: '80px 60px 1fr 140px 140px 60px 90px' }}
+            >
+              <Sk className="h-4 w-10" />
+              <Sk className="h-4 w-6" />
+              <Sk className="h-4 w-24" />
+              <Sk className="h-4 w-20" />
+              <Sk className="h-4 w-10" />
+              <Sk className="h-4 w-6" />
+              <Sk className="h-4 w-14 ml-auto" />
+            </div>
+          ))}
+        </div>
       </div>
     </>
   )

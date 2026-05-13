@@ -111,7 +111,7 @@ export function AssistantPage({ restaurant }: AssistantPageProps) {
   return (
     <>
       <div className="mb-6">
-        <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
+        <h1 className="font-display text-[28px] sm:text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
           Assistant
         </h1>
         <div className="text-body-sm text-ink-6 mt-0.5">
@@ -120,7 +120,7 @@ export function AssistantPage({ restaurant }: AssistantPageProps) {
       </div>
 
       {/* KPI row */}
-      <div className="grid grid-cols-3 gap-3 mb-7">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-7">
         <KpiTile
           label="Conversations"
           value={String(total)}
@@ -203,7 +203,7 @@ function AssistantSkeleton() {
         <Sk className="h-4 w-80" />
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-7">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-7">
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="bg-paper border border-paper-3 rounded-3 p-4 space-y-3">
             <Sk className="h-3 w-28" />

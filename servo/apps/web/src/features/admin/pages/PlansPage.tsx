@@ -349,9 +349,9 @@ export function PlansPage({ restaurant }: PlansPageProps) {
 
   return (
     <>
-      <div className="flex items-baseline justify-between mb-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between mb-6">
         <div>
-          <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
+          <h1 className="font-display text-[28px] sm:text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
             Plans
           </h1>
           <div className="text-body-sm text-ink-6 mt-0.5">
@@ -360,7 +360,7 @@ export function PlansPage({ restaurant }: PlansPageProps) {
         </div>
         <button
           onClick={openNew}
-          className="px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover active:scale-[0.98] active:duration-press"
+          className="px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover active:scale-[0.98] active:duration-press w-full sm:w-auto"
         >
           + New plan
         </button>
@@ -394,11 +394,17 @@ export function PlansPage({ restaurant }: PlansPageProps) {
             <div
               key={plan.id}
               onClick={() => openEdit(plan)}
-              className="grid items-center gap-5 px-5 py-4 border-b border-paper-3 last:border-b-0 hover:bg-paper-2/50 cursor-pointer transition-colors duration-hover"
+              className="flex flex-col gap-3 sm:grid sm:items-center px-5 py-4 border-b border-paper-3 last:border-b-0 hover:bg-paper-2/50 cursor-pointer transition-colors duration-hover"
               style={{ gridTemplateColumns: '1fr auto auto auto' }}
             >
               <div className="min-w-0">
-                <p className="text-body font-semibold text-ink">{plan.title}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-body font-semibold text-ink">{plan.title}</p>
+                  {/* Price visible inline on mobile */}
+                  <span className="sm:hidden font-mono text-body font-semibold text-ink tabular-nums">
+                    {formatPriceExact(plan.price_cents, restaurant.currency)}
+                  </span>
+                </div>
                 {plan.description && (
                   <p className="text-body-sm text-ink-6 mt-0.5 truncate">{plan.description}</p>
                 )}
@@ -413,43 +419,45 @@ export function PlansPage({ restaurant }: PlansPageProps) {
                 </p>
               </div>
 
-              <span className="font-mono text-body font-semibold text-ink tabular-nums">
+              <span className="hidden sm:inline font-mono text-body font-semibold text-ink tabular-nums">
                 {formatPriceExact(plan.price_cents, restaurant.currency)}
               </span>
 
-              <button
-                onClick={e => {
-                  e.stopPropagation()
-                  void toggleActive(plan)
-                }}
-                className={`px-3 py-1 rounded-pill text-body-sm font-medium border-[1.5px] transition-colors duration-hover ${
-                  plan.active
-                    ? 'bg-herb-wash text-herb-2 border-herb/30 hover:bg-herb/20'
-                    : 'bg-paper text-ink-6 border-paper-4 hover:border-ink-5'
-                }`}
-              >
-                {plan.active ? 'Live' : 'Off'}
-              </button>
+              <div className="flex items-center gap-2 sm:contents">
+                <button
+                  onClick={e => {
+                    e.stopPropagation()
+                    void toggleActive(plan)
+                  }}
+                  className={`px-3 py-1 rounded-pill text-body-sm font-medium border-[1.5px] transition-colors duration-hover ${
+                    plan.active
+                      ? 'bg-herb-wash text-herb-2 border-herb/30 hover:bg-herb/20'
+                      : 'bg-paper text-ink-6 border-paper-4 hover:border-ink-5'
+                  }`}
+                >
+                  {plan.active ? 'Live' : 'Off'}
+                </button>
 
-              <div className="flex items-center gap-0.5">
-                <button
-                  onClick={e => {
-                    e.stopPropagation()
-                    openEdit(plan)
-                  }}
-                  className="px-2.5 py-1.5 text-body-sm text-ink-5 hover:text-ink hover:bg-paper-2 rounded-2 transition-colors duration-hover"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={e => {
-                    e.stopPropagation()
-                    setPendingDelete(plan)
-                  }}
-                  className="px-2.5 py-1.5 text-body-sm text-ember hover:bg-ember/10 rounded-2 transition-colors duration-hover"
-                >
-                  Delete
-                </button>
+                <div className="flex items-center gap-0.5 ml-auto sm:ml-0">
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      openEdit(plan)
+                    }}
+                    className="px-2.5 py-1.5 text-body-sm text-ink-5 hover:text-ink hover:bg-paper-2 rounded-2 transition-colors duration-hover"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      setPendingDelete(plan)
+                    }}
+                    className="px-2.5 py-1.5 text-body-sm text-ember hover:bg-ember/10 rounded-2 transition-colors duration-hover"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -462,7 +470,7 @@ export function PlansPage({ restaurant }: PlansPageProps) {
         onClick={closeForm}
       />
       <div
-        className={`fixed top-0 right-0 h-full w-[480px] z-50 bg-paper flex flex-col shadow-2 transition-transform duration-standard ${formOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-full w-full sm:w-[480px] z-50 bg-paper flex flex-col shadow-2 transition-transform duration-standard ${formOpen ? 'translate-x-0' : 'translate-x-full'}`}
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
