@@ -1,7 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Send } from 'lucide-react'
+import { ArrowLeft, Send, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { AssistantMessageContent } from '@/features/guest/components/AssistantMessageContent'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
+
+const STARTER_QUESTIONS = [
+  'How do I add a new menu item?',
+  'How do QR code tables work?',
+  'How do I export my orders?',
+  'How do I turn off ordering temporarily?',
+  'What does the AI assistant do?',
+]
+
+interface AiMessage {
+  role: 'user' | 'assistant'
+  content: string
+}
 
 const TOPICS = ['Billing', 'Technical issue', 'Menu help', 'Account & access', 'Other'] as const
 type Topic = typeof TOPICS[number]
@@ -68,7 +82,7 @@ function sameDay(a: string, b: string) {
   return new Date(a).toDateString() === new Date(b).toDateString()
 }
 
-type View = 'list' | 'new' | 'thread'
+type View = 'list' | 'new' | 'thread' | 'ai'
 
 export function SupportPage({ restaurant }: SupportPageProps) {
   const [view, setView] = useState<View>('list')
@@ -88,6 +102,13 @@ export function SupportPage({ restaurant }: SupportPageProps) {
   const [sending, setSending] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  // AI chat state
+  const [aiMessages, setAiMessages] = useState<AiMessage[]>([])
+  const [aiInput, setAiInput] = useState('')
+  const [aiLoading, setAiLoading] = useState(false)
+  const aiBottomRef = useRef<HTMLDivElement>(null)
+  const aiTextareaRef = useRef<HTMLTextAreaElement>(null)
 
   async function loadTickets() {
     const [{ data: ticketData }, { data: msgData }] = await Promise.all([
@@ -208,6 +229,35 @@ export function SupportPage({ restaurant }: SupportPageProps) {
     return () => { supabase.removeChannel(channel) }
   }, [selectedId])
 
+  async function sendAiMessage(text: string) {
+    const userMsg: AiMessage = { role: 'user', content: text }
+    const next = [...aiMessages, userMsg]
+    setAiMessages(next)
+    setAiInput('')
+    setAiLoading(true)
+    setTimeout(() => aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+
+    const { data, error } = await supabase.functions.invoke('support-ai', {
+      body: { messages: next },
+    })
+
+    if (error || !data?.text) {
+      setAiMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I had trouble responding. Please try again or open a support ticket.' }])
+    } else {
+      setAiMessages(prev => [...prev, { role: 'assistant', content: data.text }])
+    }
+    setAiLoading(false)
+    setTimeout(() => aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    aiTextareaRef.current?.focus()
+  }
+
+  function handleAiKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      if (aiInput.trim() && !aiLoading) void sendAiMessage(aiInput.trim())
+    }
+  }
+
   async function submitNewTicket() {
     if (!newTopic || !newBody.trim() || submitting) return
     setSubmitting(true)
@@ -272,22 +322,33 @@ export function SupportPage({ restaurant }: SupportPageProps) {
   if (view === 'list') {
     return (
       <div className="flex flex-col h-[calc(100dvh-56px)]">
-        <div className="shrink-0 mb-5 grid grid-cols-[1fr_auto] gap-x-3 gap-y-2 md:gap-y-0 md:items-end">
-          <h1 className="col-start-1 row-start-1 min-w-0 self-start font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
-            Support
-          </h1>
-          <button
-            type="button"
-            onClick={() => setView('new')}
-            aria-label="Open new ticket"
-            className="col-start-2 row-start-1 self-start shrink-0 px-4 py-2 rounded-pill bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover md:self-end md:row-span-2"
-          >
-            <span className="md:hidden">New</span>
-            <span className="hidden md:inline">Open new ticket</span>
-          </button>
-          <div className="col-span-2 md:col-span-1 row-start-2 min-w-0 text-body-sm text-ink-6 md:mt-0.5">
-            Contact the Mise team — we typically reply within a few hours.
+        <div className="shrink-0 mb-5">
+          <div className="flex items-start justify-between gap-3 mb-1">
+            <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
+              Support
+            </h1>
+            <div className="flex items-center gap-2 shrink-0 mt-1">
+              <button
+                type="button"
+                onClick={() => { setAiMessages([]); setView('ai') }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-pill border border-paper-4 text-ink text-body-sm font-semibold hover:bg-paper-2 transition-colors duration-hover"
+              >
+                <Sparkles size={14} className="text-saffron" />
+                <span className="hidden sm:inline">Ask AI</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('new')}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-pill bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover"
+              >
+                <span className="sm:hidden">New</span>
+                <span className="hidden sm:inline">Open ticket</span>
+              </button>
+            </div>
           </div>
+          <p className="text-body-sm text-ink-6">
+            Contact the Mise team — we typically reply within a few hours.
+          </p>
         </div>
 
         {restaurant.suspended && (
@@ -305,14 +366,23 @@ export function SupportPage({ restaurant }: SupportPageProps) {
             <div className="flex flex-col items-center justify-center flex-1 text-center py-16 px-8">
               <p className="text-body font-semibold text-ink mb-1">No tickets yet</p>
               <p className="text-body-sm text-ink-6 max-w-[280px] leading-relaxed">
-                Open a ticket to get in touch with the Mise team about billing, technical issues, your menu, or anything else.
+                Get instant help from our AI, or open a ticket to reach the Mise team directly.
               </p>
-              <button
-                onClick={() => setView('new')}
-                className="mt-5 px-4 py-2 rounded-pill bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors"
-              >
-                Open a ticket
-              </button>
+              <div className="flex items-center gap-2.5 mt-5">
+                <button
+                  onClick={() => { setAiMessages([]); setView('ai') }}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-pill border border-paper-4 text-ink text-body-sm font-semibold hover:bg-paper-2 transition-colors"
+                >
+                  <Sparkles size={13} className="text-saffron" />
+                  Ask AI
+                </button>
+                <button
+                  onClick={() => setView('new')}
+                  className="px-4 py-2 rounded-pill bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors"
+                >
+                  Open a ticket
+                </button>
+              </div>
             </div>
           ) : (
             <div className="overflow-y-auto flex-1">
@@ -421,6 +491,138 @@ export function SupportPage({ restaurant }: SupportPageProps) {
           >
             {submitting ? 'Opening ticket…' : 'Open ticket'}
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ── AI chat view ──────────────────────────────────────────────────────────
+  if (view === 'ai') {
+    const isEmpty = aiMessages.length === 0
+
+    return (
+      <div className="flex flex-col h-[calc(100dvh-56px)]">
+        <div className="shrink-0 mb-4">
+          <button
+            onClick={() => setView('list')}
+            className="flex items-center gap-1.5 text-body-sm text-ink-6 hover:text-ink transition-colors mb-3"
+          >
+            <ArrowLeft size={14} />
+            Back to support
+          </button>
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-saffron shrink-0" />
+            <h1 className="font-display text-[24px] font-[500] text-ink tracking-[-0.01em] font-optical leading-tight">
+              Ask AI
+            </h1>
+          </div>
+          <p className="text-body-sm text-ink-6 mt-0.5 ml-[26px]">
+            Get instant answers about using Mise. For billing or account issues, open a support ticket.
+          </p>
+        </div>
+
+        <div className="flex-1 min-h-0 bg-paper border border-paper-3 rounded-3 flex flex-col overflow-hidden">
+          {/* Messages or starter prompts */}
+          <div className="flex-1 overflow-y-auto px-5 py-5">
+            {isEmpty ? (
+              <div className="flex flex-col items-center justify-center h-full text-center py-8">
+                <div className="w-12 h-12 rounded-full bg-saffron/10 flex items-center justify-center mb-4">
+                  <Sparkles size={20} className="text-saffron" />
+                </div>
+                <p className="text-body font-semibold text-ink mb-1">What can I help you with?</p>
+                <p className="text-body-sm text-ink-6 mb-6 max-w-[280px]">
+                  Ask me anything about the Mise platform.
+                </p>
+                <div className="flex flex-col gap-2 w-full max-w-[420px]">
+                  {STARTER_QUESTIONS.map(q => (
+                    <button
+                      key={q}
+                      onClick={() => void sendAiMessage(q)}
+                      className="text-left px-4 py-2.5 rounded-2 border border-paper-3 text-body-sm text-ink hover:bg-paper-2 hover:border-paper-4 transition-colors duration-hover"
+                    >
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                {aiMessages.map((msg, i) => {
+                  const isUser = msg.role === 'user'
+                  return (
+                    <div key={i} className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-2`}>
+                      <div className={`max-w-[78%] ${isUser ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
+                        {!isUser && (
+                          <div className="flex items-center gap-1.5 px-1 mb-0.5">
+                            <Sparkles size={11} className="text-saffron" />
+                            <span className="text-[11px] text-ink-6">Mise AI</span>
+                          </div>
+                        )}
+                        <div
+                          className={`px-3.5 py-2.5 rounded-2 text-[14px] leading-relaxed break-words ${
+                            isUser
+                              ? 'bg-ink text-paper rounded-br-[4px] whitespace-pre-wrap'
+                              : 'bg-paper-2 text-ink rounded-bl-[4px]'
+                          }`}
+                        >
+                          {isUser
+                            ? msg.content
+                            : <AssistantMessageContent text={msg.content} />
+                          }
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {aiLoading && (
+                  <div className="flex justify-start mb-2">
+                    <div className="flex flex-col gap-0.5 items-start">
+                      <div className="flex items-center gap-1.5 px-1 mb-0.5">
+                        <Sparkles size={11} className="text-saffron" />
+                        <span className="text-[11px] text-ink-6">Mise AI</span>
+                      </div>
+                      <div className="px-3.5 py-3 rounded-2 rounded-bl-[4px] bg-paper-2">
+                        <div className="flex gap-1 items-center">
+                          <span className="w-1.5 h-1.5 rounded-full bg-ink-5 animate-bounce [animation-delay:0ms]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-ink-5 animate-bounce [animation-delay:150ms]" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-ink-5 animate-bounce [animation-delay:300ms]" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                <div ref={aiBottomRef} />
+              </div>
+            )}
+          </div>
+
+          {/* Input */}
+          <div className="shrink-0 border-t border-paper-3 px-4 py-3 flex items-end gap-3">
+            <textarea
+              ref={aiTextareaRef}
+              value={aiInput}
+              onChange={e => setAiInput(e.target.value)}
+              onKeyDown={handleAiKey}
+              placeholder="Ask about menus, orders, tables, settings…"
+              rows={1}
+              disabled={aiLoading}
+              className="flex-1 resize-none bg-paper-2 rounded-2 px-3 py-2.5 text-base text-ink placeholder:text-ink-7 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-saffron/40 leading-relaxed disabled:opacity-60"
+              style={{ maxHeight: '120px', overflowY: 'auto' }}
+              onInput={e => {
+                const el = e.currentTarget
+                el.style.height = 'auto'
+                el.style.height = `${Math.min(el.scrollHeight, 120)}px`
+              }}
+            />
+            <button
+              onClick={() => { if (aiInput.trim() && !aiLoading) void sendAiMessage(aiInput.trim()) }}
+              disabled={!aiInput.trim() || aiLoading}
+              className="shrink-0 w-9 h-9 rounded-2 bg-saffron text-paper flex items-center justify-center disabled:opacity-30 hover:bg-saffron-2 transition-colors duration-hover"
+              aria-label="Send message"
+            >
+              <Send size={15} />
+            </button>
+          </div>
         </div>
       </div>
     )
