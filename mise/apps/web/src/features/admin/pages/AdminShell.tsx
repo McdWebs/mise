@@ -263,7 +263,7 @@ export default function AdminShell() {
   }
 
   return (
-    <div className="flex min-h-dvh bg-paper">
+    <div className="flex min-h-dvh min-w-0 w-full bg-paper">
 
       {/* ── Desktop sidebar (md+) ─────────────────────────────────────────── */}
       <aside className="hidden md:flex w-60 shrink-0 bg-paper border-r border-paper-3 flex-col sticky top-0 h-dvh overflow-y-auto">
@@ -282,16 +282,6 @@ export default function AdminShell() {
           </span>
         </div>
         <SidebarNav />
-        {/* Sign out (desktop only footer) */}
-        <div className="px-4 pb-3 border-t-0">
-          <button
-            onClick={() => void supabase.auth.signOut()}
-            className="flex items-center gap-2 text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover"
-          >
-            <LogOut size={14} />
-            Sign out
-          </button>
-        </div>
       </aside>
 
       {/* ── Mobile top bar (< md) ─────────────────────────────────────────── */}
@@ -353,7 +343,7 @@ export default function AdminShell() {
       </div>
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
-      <main className="flex-1 px-4 pt-[72px] pb-6 md:px-9 md:py-7 md:pt-7 md:pb-7 max-w-[1200px] w-full">
+      <main className="flex-1 min-w-0 px-4 pt-[72px] pb-6 md:px-9 md:py-7 md:pt-7 md:pb-7 max-w-[1200px] w-full">
         {restaurant.suspended
           ? <SuspendedBanner />
           : !restaurant.accepting_orders

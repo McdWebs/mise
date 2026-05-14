@@ -4,14 +4,16 @@ import { elapsedSeconds, fmtTimer } from '@/features/kitchen/utils/timerUtils'
 import { StagePill } from './StagePill'
 import type { OrderStage } from '@mise/types'
 import { orderLinesSummary } from '@/lib/orderLineLabel'
+import { formatPriceExact } from '@/features/guest/utils/formatPrice'
 
 const ACTIVE_STAGES: OrderStage[] = ['received', 'cooking', 'ready']
 
 interface LiveOrdersStripProps {
   restaurantId: string
+  currency: string
 }
 
-export function LiveOrdersStrip({ restaurantId }: LiveOrdersStripProps) {
+export function LiveOrdersStrip({ restaurantId, currency }: LiveOrdersStripProps) {
   const { orders } = useKitchenOrders(restaurantId)
   const [, setTick] = useState(0)
 
@@ -27,7 +29,7 @@ export function LiveOrdersStrip({ restaurantId }: LiveOrdersStripProps) {
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="w-full min-w-0 overflow-x-auto">
       {/* Header row */}
       <div
         className="grid gap-4 py-3 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest min-w-[480px]"
@@ -53,7 +55,7 @@ export function LiveOrdersStrip({ restaurantId }: LiveOrdersStripProps) {
             {fmtTimer(elapsedSeconds(order.created_at))}
           </span>
           <span className="font-mono font-semibold text-ink text-right tabular-nums">
-            ${(order.subtotal_cents / 100).toFixed(2)}
+            {formatPriceExact(order.subtotal_cents, currency)}
           </span>
         </div>
       ))}

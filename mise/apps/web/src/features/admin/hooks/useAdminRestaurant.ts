@@ -9,6 +9,7 @@ export interface AdminRestaurant {
   currency: string
   accepting_orders: boolean
   suspended: boolean
+  assistant_instructions: string | null
 }
 
 export function useAdminRestaurant(userId: string | undefined) {
@@ -17,7 +18,7 @@ export function useAdminRestaurant(userId: string | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('restaurant_members')
-        .select('restaurants(id, name, slug, tagline, currency, accepting_orders, suspended)')
+        .select('restaurants(id, name, slug, tagline, currency, accepting_orders, suspended, assistant_instructions)')
         .eq('user_id', userId!)
         .limit(1)
         .single()

@@ -290,10 +290,8 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 flex flex-col"
+        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 flex flex-col h-[60dvh] max-h-[88dvh] min-h-0 overflow-hidden"
         style={{
-          minHeight: '60dvh',
-          maxHeight: '88dvh',
           transform: open ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 320ms cubic-bezier(0.2,0.8,0.2,1)',
           willChange: 'transform',
@@ -304,10 +302,10 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
         aria-label="Menu assistant"
       >
         {/* Handle */}
-        <div className="w-9 h-1 bg-paper-4 rounded-pill mx-auto mt-1.5 mb-3" />
+        <div className="shrink-0 w-9 h-1 bg-paper-4 rounded-pill mx-auto mt-1.5 mb-3" />
 
         {/* Header */}
-        <div className="flex items-center gap-2.5 mb-3">
+        <div className="shrink-0 flex items-center gap-2.5 mb-3">
           <div className="w-8 h-8 rounded-full bg-ink text-saffron flex items-center justify-center font-display font-[500] text-[16px] shrink-0">
             M
           </div>
@@ -325,7 +323,7 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto flex flex-col gap-3 pb-1">
+        <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pb-1">
           {messages.map((m, i) => {
             const isLastAssistant = m.role === 'assistant' && i === messages.length - 1
             const showConnecting = isLastAssistant && awaitingReply && m.content === ''
@@ -384,7 +382,7 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
         </div>
 
         {/* Quick replies */}
-        <div className="flex flex-wrap gap-1.5 my-3.5">
+        <div className="shrink-0 flex flex-wrap gap-1.5 my-3.5">
           {QUICK_REPLIES.map(q => (
             <button
               key={q}
@@ -400,7 +398,7 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
         {/* Composer */}
         <form
           onSubmit={e => { e.preventDefault(); send(draft) }}
-          className="flex items-center gap-2 border border-[1.5px] border-paper-4 rounded-pill px-4 py-[10px]"
+          className="shrink-0 flex items-center gap-2 border border-[1.5px] border-paper-4 rounded-pill px-4 py-[10px]"
         >
           <input
             ref={inputRef}

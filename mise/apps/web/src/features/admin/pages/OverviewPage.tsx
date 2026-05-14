@@ -62,17 +62,17 @@ export function OverviewPage({ restaurant }: OverviewPageProps) {
 
   return (
     <>
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-6">
-        <div>
+      <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between mb-6">
+        <div className="min-w-0">
           <h1 className="font-display text-[28px] sm:text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
             Service overview
           </h1>
-          <div className="text-body-sm text-ink-6 mt-0.5">Today · {today}</div>
+          <div className="text-body-sm text-ink-6 mt-0.5 break-words">Today · {today}</div>
         </div>
       </div>
 
       {/* KPI grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
+      <div className="grid min-w-0 grid-cols-2 gap-3 mb-7 lg:grid-cols-4">
         <KpiTile
           label="Orders today"
           value={String(orderCount)}
@@ -108,14 +108,14 @@ export function OverviewPage({ restaurant }: OverviewPageProps) {
       </div>
 
       {/* Live orders */}
-      <div className="bg-paper border border-paper-3 rounded-3 p-5 mb-6">
+      <div className="min-w-0 bg-paper border border-paper-3 rounded-3 p-5 mb-6">
         <h2 className="font-display text-[22px] font-[500] text-ink tracking-[-0.005em] font-optical mb-1">
           Live orders
         </h2>
         <div className="text-body-sm text-ink-6 mb-3">
           {orders.filter(o => ACTIVE_STAGES.includes(o.stage)).length} active
         </div>
-        <LiveOrdersStrip restaurantId={restaurant.id} />
+        <LiveOrdersStrip restaurantId={restaurant.id} currency={restaurant.currency} />
       </div>
 
       {/* Tables */}
@@ -148,18 +148,18 @@ function TablesSection({ tables, tableStats, activeTableLabels, currency }: Tabl
   })
 
   return (
-    <div className="bg-paper border border-paper-3 rounded-3 overflow-hidden">
+    <div className="min-w-0 bg-paper border border-paper-3 rounded-3 overflow-hidden">
       {/* Section header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-paper-3">
-        <h2 className="font-display text-[22px] font-[500] text-ink tracking-[-0.005em] font-optical">
+      <div className="flex min-w-0 items-center justify-between gap-3 px-5 py-4 border-b border-paper-3">
+        <h2 className="min-w-0 truncate font-display text-[22px] font-[500] text-ink tracking-[-0.005em] font-optical">
           Tables
         </h2>
-        <span className="text-body-sm text-ink-6">
+        <span className="shrink-0 text-body-sm text-ink-6">
           {occupiedCount} of {tables.length} occupied
         </span>
       </div>
 
-      <div className="overflow-x-auto">
+      <div className="min-w-0 overflow-x-auto">
       {/* Column header */}
       <div
         className="grid gap-4 px-5 py-2.5 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest min-w-[560px]"
@@ -232,7 +232,7 @@ function TablesSection({ tables, tableStats, activeTableLabels, currency }: Tabl
 
             <span className="text-ink-5 truncate">{table.waiter_name ?? '—'}</span>
 
-            <span className="text-ink-5 font-mono text-[12px]">{mergedDisplay ?? '—'}</span>
+            <span className="min-w-0 truncate font-mono text-[12px] text-ink-5">{mergedDisplay ?? '—'}</span>
 
             <span className="font-mono tabular-nums text-ink">
               {stats?.orderCount ?? '—'}
@@ -259,7 +259,7 @@ function OverviewSkeleton() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
+      <div className="grid grid-cols-2 gap-3 mb-7 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-paper border border-paper-3 rounded-3 p-4 space-y-3">
             <Sk className="h-3 w-24" />

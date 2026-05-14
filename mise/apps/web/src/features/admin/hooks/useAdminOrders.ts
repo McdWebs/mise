@@ -16,11 +16,11 @@ export interface AdminOrder {
   }[]
 }
 
-export function useAdminOrders(restaurantId: string | undefined, since: string) {
+export function useAdminOrders(restaurantId: string | undefined, since: string, until?: string) {
   return useQuery<AdminOrder[]>({
-    queryKey: ['admin-orders', restaurantId, since],
+    queryKey: ['admin-orders', restaurantId, since, until ?? 'now'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('orders')
         .select(
           'id, table_label, stage, subtotal_cents, created_at, updated_at, order_items(quantity, menu_items(name), restaurant_plans(title))'
@@ -28,6 +28,8 @@ export function useAdminOrders(restaurantId: string | undefined, since: string) 
         .eq('restaurant_id', restaurantId!)
         .gte('created_at', since)
         .order('created_at', { ascending: false })
+      if (until) query = query.lte('created_at', until)
+      const { data, error } = await query
       if (error) throw error
       return (data ?? []) as unknown as AdminOrder[]
     },

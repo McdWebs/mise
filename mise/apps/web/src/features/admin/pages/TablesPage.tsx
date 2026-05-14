@@ -53,11 +53,11 @@ export function TablesPage({ restaurant }: TablesPageProps) {
 
   return (
     <>
-      <div className="mb-6">
+      <div className="mb-6 min-w-0">
         <h1 className="font-display text-[28px] sm:text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
           Tables
         </h1>
-        <div className="text-body-sm text-ink-6 mt-0.5">Today · {today}</div>
+        <div className="text-body-sm text-ink-6 mt-0.5 break-words">Today · {today}</div>
       </div>
 
       {tables.length === 0 ? (
@@ -70,7 +70,7 @@ export function TablesPage({ restaurant }: TablesPageProps) {
       ) : (
         <>
           {/* KPI row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
+          <div className="grid min-w-0 grid-cols-2 gap-3 mb-7 lg:grid-cols-4">
             <KpiCard label="Total tables" value={String(tables.length)} />
             <KpiCard
               label="Occupied"
@@ -89,17 +89,17 @@ export function TablesPage({ restaurant }: TablesPageProps) {
           </div>
 
           {/* Tables grid */}
-          <div className="bg-paper border border-paper-3 rounded-3 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-paper-3">
-              <h2 className="font-display text-[22px] font-[500] text-ink tracking-[-0.005em] font-optical">
+          <div className="min-w-0 bg-paper border border-paper-3 rounded-3 overflow-hidden">
+            <div className="flex min-w-0 items-center justify-between gap-3 px-5 py-4 border-b border-paper-3">
+              <h2 className="min-w-0 truncate font-display text-[22px] font-[500] text-ink tracking-[-0.005em] font-optical">
                 Floor
               </h2>
-              <span className="text-body-sm text-ink-6">
+              <span className="shrink-0 text-body-sm text-ink-6">
                 {occupiedCount} occupied · {freeCount} free
               </span>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="min-w-0 overflow-x-auto">
             {/* Column headers */}
             <div
               className="grid gap-4 px-5 py-2.5 border-b border-paper-3 text-overline text-ink-6 uppercase tracking-widest min-w-[640px]"
@@ -172,7 +172,7 @@ export function TablesPage({ restaurant }: TablesPageProps) {
 
                   <span className="text-ink-5 truncate">{table.waiter_name ?? '—'}</span>
 
-                  <span className="text-ink-5 font-mono text-[12px]">{mergedDisplay ?? '—'}</span>
+                  <span className="min-w-0 truncate font-mono text-[12px] text-ink-5">{mergedDisplay ?? '—'}</span>
 
                   <span className="font-mono tabular-nums text-ink">
                     {stats?.orderCount ?? '—'}
@@ -209,9 +209,9 @@ function KpiCard({
       : 'text-ink'
 
   return (
-    <div className="bg-paper border border-paper-3 rounded-3 p-4">
+    <div className="min-w-0 bg-paper border border-paper-3 rounded-3 p-4">
       <p className="text-overline text-ink-6 uppercase tracking-widest mb-2">{label}</p>
-      <p className={`font-display text-[32px] font-[500] tracking-[-0.02em] font-optical leading-none ${valueColor}`}>
+      <p className={`font-display text-[32px] font-[500] tracking-[-0.02em] font-optical leading-tight break-words ${valueColor}`}>
         {value}
       </p>
     </div>
@@ -226,7 +226,7 @@ function TablesSkeleton() {
         <Sk className="h-4 w-40" />
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
+      <div className="grid grid-cols-2 gap-3 mb-7 lg:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="bg-paper border border-paper-3 rounded-3 p-4 space-y-3">
             <Sk className="h-3 w-24" />

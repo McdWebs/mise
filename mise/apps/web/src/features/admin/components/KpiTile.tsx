@@ -27,12 +27,12 @@ interface KpiTileProps {
 
 export function KpiTile({ label, value, delta, deltaDown, spark }: KpiTileProps) {
   return (
-    <div className="p-4 bg-paper border border-paper-3 rounded-3 flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1 rounded-3 border border-paper-3 bg-paper p-4">
       <div className="text-overline text-ink-6 uppercase tracking-widest">{label}</div>
-      <div className="font-display text-[34px] font-[500] text-ink leading-none tracking-[-0.015em] font-optical">
+      <div className="font-display text-[34px] font-[500] text-ink leading-tight tracking-[-0.015em] font-optical break-words">
         {value}
       </div>
-      <div className={`font-mono text-[11px] font-semibold mt-0.5 ${deltaDown ? 'text-ember' : 'text-herb-2'}`}>
+      <div className={`mt-0.5 font-mono text-[11px] font-semibold break-words ${deltaDown ? 'text-ember' : 'text-herb-2'}`}>
         {delta}
       </div>
       <SparkBar data={spark} />

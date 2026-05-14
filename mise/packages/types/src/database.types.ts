@@ -51,6 +51,7 @@ export interface Database {
           currency: string
           accepting_orders: boolean
           suspended: boolean
+          assistant_instructions: string | null
           created_at: string
           updated_at: string
         }
@@ -62,6 +63,7 @@ export interface Database {
           currency?: string
           accepting_orders?: boolean
           suspended?: boolean
+          assistant_instructions?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -73,6 +75,7 @@ export interface Database {
           currency?: string
           accepting_orders?: boolean
           suspended?: boolean
+          assistant_instructions?: string | null
           created_at?: string
           updated_at?: string
         }
