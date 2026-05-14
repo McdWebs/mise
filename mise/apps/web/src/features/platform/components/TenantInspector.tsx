@@ -159,7 +159,7 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
               <div className="grid grid-cols-3 gap-2">
                 {[
                   { label: 'Guest menu',  sub: `r/${tenant.slug}`, href: `/r/${tenant.slug}` },
-                  { label: 'Kitchen',     sub: 'display board',    href: `/kitchen` },
+                  { label: 'Kitchen',     sub: 'display board',    href: `/kitchen/${tenant.id}` },
                   { label: 'Owner admin', sub: 'view as owner',    href: `/admin/enter?as=${tenant.id}` },
                 ].map(({ label, sub, href }) => (
                   <a

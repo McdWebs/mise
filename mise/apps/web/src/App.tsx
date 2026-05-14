@@ -39,7 +39,7 @@ export default function App() {
         <Route path="/platform/login" element={<PlatformLoginPage />} />
 
         {/* Kitchen — no login, opened from admin */}
-        <Route path="/kitchen" element={<KitchenPage />} />
+        <Route path="/kitchen/:restaurantId" element={<KitchenPage />} />
 
         {/* Platform admin impersonation entry — must be before the guarded /admin/* */}
         <Route path="/admin/enter" element={<AdminEnterPage />} />

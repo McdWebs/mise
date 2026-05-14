@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useSearchParams, useParams } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useSession } from '@/features/auth/hooks/useSession'
-import { useRestaurantMembership } from '../hooks/useRestaurantMembership'
 import { useKitchenOrders } from '../hooks/useKitchenOrders'
 import { useWaiterCalls } from '../hooks/useWaiterCalls'
 import { KitchenTopBar } from '../components/KitchenTopBar'
@@ -24,18 +23,28 @@ function Spinner() {
 }
 
 export default function KitchenPage() {
+  const { restaurantId } = useParams<{ restaurantId: string }>()
   const [searchParams, setSearchParams] = useSearchParams()
   const view: KitchenView = searchParams.get('view') === 'tables' ? 'tables' : 'orders'
 
-  const { user } = useSession()
-  const { data: memberships, isLoading: memberLoading } = useRestaurantMembership(user?.id)
-
-  const membership = memberships?.[0]
-  const restaurant = membership?.restaurants
+  const { data: restaurant, isLoading: restaurantLoading } = useQuery({
+    queryKey: ['kitchen-restaurant', restaurantId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('restaurants')
+        .select('id, name, slug, accepting_orders')
+        .eq('id', restaurantId!)
+        .single()
+      if (error) throw error
+      return data as { id: string; name: string; slug: string; accepting_orders: boolean }
+    },
+    enabled: Boolean(restaurantId),
+    staleTime: 1000 * 60 * 5,
+  })
 
   const { orders, pulsingId, loading: ordersLoading, applyOrderStage, restoreKitchenOrder } =
-    useKitchenOrders(restaurant?.id)
-  const { calls, acknowledgeCall } = useWaiterCalls(restaurant?.id)
+    useKitchenOrders(restaurantId)
+  const { calls, acknowledgeCall } = useWaiterCalls(restaurantId)
 
   const [accepting, setAccepting] = useState<boolean>(true)
   const acceptingRef = useRef(accepting)
@@ -93,12 +102,12 @@ export default function KitchenPage() {
     if (error) applyOrderStage(orderId, prevStage)
   }
 
-  if (memberLoading || ordersLoading) return <Spinner />
+  if (restaurantLoading || ordersLoading) return <Spinner />
 
   if (!restaurant) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-ink">
-        <p className="text-body text-ink-6">No restaurant assigned to your account.</p>
+        <p className="text-body text-ink-6">Restaurant not found.</p>
       </div>
     )
   }

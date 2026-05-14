@@ -242,7 +242,7 @@ export default function AdminShell() {
             Guest menu
           </a>
           <a
-            href={`${origin}/kitchen`}
+            href={`${origin}/kitchen/${restaurant!.id}`}
             target="_blank"
             rel="noopener noreferrer"
             className="flex w-full items-center gap-2 text-left text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover no-underline"
