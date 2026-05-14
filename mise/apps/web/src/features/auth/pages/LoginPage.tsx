@@ -16,7 +16,7 @@ export default function LoginPage() {
     e.preventDefault()
     setError(null)
     setLoading(true)
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password })
     if (authError) {
       const msg = authError.message?.trim()
       setError(
@@ -27,6 +27,29 @@ export default function LoginPage() {
       setLoading(false)
       return
     }
+
+    // If redirected from a specific admin URL, go back there
+    if (from && from !== '/admin' && from.startsWith('/admin/')) {
+      navigate(from, { replace: true })
+      return
+    }
+
+    // Otherwise look up the owner's restaurant slug and navigate to it
+    const userId = authData.user?.id
+    if (userId) {
+      const { data: membership } = await supabase
+        .from('restaurant_members')
+        .select('restaurants(slug)')
+        .eq('user_id', userId)
+        .limit(1)
+        .single()
+      const slug = (membership as unknown as { restaurants: { slug: string } } | null)?.restaurants?.slug
+      if (slug) {
+        navigate(`/admin/${slug}/overview`, { replace: true })
+        return
+      }
+    }
+
     navigate(from, { replace: true })
   }
 

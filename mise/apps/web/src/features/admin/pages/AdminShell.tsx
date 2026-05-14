@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { MonitorPlay, UtensilsCrossed, Menu, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
@@ -47,7 +47,8 @@ function SuspendedBanner() {
           </div>
         </div>
         <NavLink
-          to="/admin/support"
+          to="support"
+          relative="path"
           className="shrink-0 px-4 py-2.5 rounded-2 bg-ember text-paper text-body-sm font-semibold hover:opacity-90 transition-opacity whitespace-nowrap text-center no-underline"
         >
           Contact support
@@ -57,7 +58,7 @@ function SuspendedBanner() {
   )
 }
 
-function PausedBanner({ restaurant, userId }: { restaurant: AdminRestaurant; userId: string }) {
+function PausedBanner({ restaurant }: { restaurant: AdminRestaurant }) {
   const qc = useQueryClient()
   const [resuming, setResuming] = useState(false)
   const [error, setError] = useState('')
@@ -74,7 +75,7 @@ function PausedBanner({ restaurant, userId }: { restaurant: AdminRestaurant; use
       setResuming(false)
       return
     }
-    await qc.invalidateQueries({ queryKey: ['admin-restaurant', userId] })
+    await qc.invalidateQueries({ queryKey: ['admin-restaurant', restaurant.slug] })
     setResuming(false)
   }
 
@@ -111,9 +112,10 @@ function Spinner() {
 
 export default function AdminShell() {
   const { user } = useSession()
+  const { slug } = useParams<{ slug: string }>()
   const [searchParams] = useSearchParams()
-  const impersonatingId = searchParams.get('as') ?? undefined
-  const { data: restaurant, isLoading } = useAdminRestaurant(user?.id, impersonatingId)
+  const isPlatformAdmin = searchParams.get('platform') === '1'
+  const { data: restaurant, isLoading } = useAdminRestaurant(slug)
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [supportUnread, setSupportUnread] = useState(0)
@@ -166,7 +168,8 @@ export default function AdminShell() {
   function NavItem({ id, label }: { id: AdminPage; label: string }) {
     return (
       <NavLink
-        to={`/admin/${id}`}
+        to={id}
+        relative="path"
         className={({ isActive }) =>
           `flex items-center gap-2.5 px-2.5 py-2 rounded-2 text-body font-medium w-full text-left transition-colors duration-hover ${
             isActive ? 'bg-ink text-paper' : 'text-ink-5 hover:bg-paper-2 hover:text-ink'
@@ -214,7 +217,8 @@ export default function AdminShell() {
         </div>
         <div className="px-2 space-y-0.5">
           <NavLink
-            to="/admin/support"
+            to="support"
+            relative="path"
             className={({ isActive }) =>
               `flex items-center justify-between px-2.5 py-2 rounded-2 text-body font-medium w-full text-left transition-colors duration-hover ${
                 isActive ? 'bg-ink text-paper' : 'text-ink-5 hover:bg-paper-2 hover:text-ink'
@@ -337,7 +341,7 @@ export default function AdminShell() {
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 px-4 pt-[72px] pb-6 md:px-9 md:py-7 md:pt-7 md:pb-7 max-w-[1200px] w-full">
-        {impersonatingId && (
+        {isPlatformAdmin && (
           <div className="mb-6 rounded-3 border border-saffron/40 bg-saffron-wash px-5 py-3 flex items-center justify-between gap-4">
             <p className="text-body-sm text-ink-5">
               Viewing <span className="font-semibold text-ink">{restaurant.name}</span> as platform admin
@@ -350,11 +354,11 @@ export default function AdminShell() {
             </button>
           </div>
         )}
-        {!impersonatingId && (
+        {!isPlatformAdmin && (
           restaurant.suspended
             ? <SuspendedBanner />
             : !restaurant.accepting_orders
-            ? <PausedBanner restaurant={restaurant} userId={user!.id} />
+            ? <PausedBanner restaurant={restaurant} />
             : null
         )}
         <Routes>
@@ -367,7 +371,7 @@ export default function AdminShell() {
           <Route path="tables"    element={<TablesPage    restaurant={restaurant} />} />
           <Route path="assistant" element={<AssistantPage restaurant={restaurant} />} />
           <Route path="support"   element={<SupportPage   restaurant={restaurant} />} />
-          <Route path="*"         element={<Navigate to="/admin/overview" replace />} />
+          <Route path="*"         element={<Navigate to="overview" replace />} />
         </Routes>
       </main>
 

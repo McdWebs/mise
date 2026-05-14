@@ -31,7 +31,20 @@ export function AdminEnterPage() {
         return
       }
 
-      navigate(`/admin?as=${asParam}`, { replace: true })
+      // Fetch the restaurant slug so we can build the slug-based URL
+      const { data: restaurant } = await supabasePlatform
+        .from('restaurants')
+        .select('slug')
+        .eq('id', asParam)
+        .single()
+
+      const slug = (restaurant as { slug: string } | null)?.slug
+      if (!slug) {
+        setError('Restaurant not found.')
+        return
+      }
+
+      navigate(`/admin/${slug}/overview?platform=1`, { replace: true })
     })
   }, [])
 

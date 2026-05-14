@@ -12,31 +12,19 @@ export interface AdminRestaurant {
   assistant_instructions: string | null
 }
 
-export function useAdminRestaurant(userId: string | undefined, restaurantIdOverride?: string) {
+export function useAdminRestaurant(slug: string | undefined) {
   return useQuery<AdminRestaurant | null>({
-    queryKey: ['admin-restaurant', userId, restaurantIdOverride],
+    queryKey: ['admin-restaurant', slug],
     queryFn: async () => {
-      if (restaurantIdOverride) {
-        // Super admin viewing a specific restaurant by ID
-        const { data, error } = await supabase
-          .from('restaurants')
-          .select('id, name, slug, tagline, currency, accepting_orders, suspended, assistant_instructions')
-          .eq('id', restaurantIdOverride)
-          .single()
-        if (error) throw error
-        return data as AdminRestaurant ?? null
-      }
-      // Normal owner path: look up via restaurant_members
       const { data, error } = await supabase
-        .from('restaurant_members')
-        .select('restaurants(id, name, slug, tagline, currency, accepting_orders, suspended, assistant_instructions)')
-        .eq('user_id', userId!)
-        .limit(1)
+        .from('restaurants')
+        .select('id, name, slug, tagline, currency, accepting_orders, suspended, assistant_instructions')
+        .eq('slug', slug!)
         .single()
       if (error) throw error
-      return (data as unknown as { restaurants: AdminRestaurant })?.restaurants ?? null
+      return data as AdminRestaurant ?? null
     },
-    enabled: Boolean(userId),
+    enabled: Boolean(slug),
     staleTime: 1000 * 60 * 5,
   })
 }
