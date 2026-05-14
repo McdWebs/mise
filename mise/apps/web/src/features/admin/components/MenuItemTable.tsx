@@ -104,7 +104,7 @@ export function MenuItemTable({
   }
 
   return (
-    <div>
+    <div className="overflow-x-auto">
       {items.map(item => {
         const isDragging = dragId === item.id
         const isOver = overId === item.id && dragId !== item.id
@@ -117,7 +117,7 @@ export function MenuItemTable({
             onDrop={e => onDrop(e, item.id)}
             onDragEnd={onDragEnd}
             onClick={() => onEdit(item)}
-            className="grid items-center gap-4 px-1 py-3 border-b border-paper-3 hover:bg-paper-2 transition-colors duration-hover cursor-pointer"
+            className="grid items-center gap-4 px-1 py-3 border-b border-paper-3 hover:bg-paper-2 transition-colors duration-hover cursor-pointer min-w-[380px]"
             style={{
               gridTemplateColumns: '18px 1fr 90px 80px 40px',
               opacity: isDragging ? 0.4 : 1,
@@ -229,7 +229,7 @@ export function MenuItemTable({
       {/* Add item row */}
       <button
         onClick={onAdd}
-        className="w-full grid gap-4 px-1 py-3.5 text-left text-body-sm text-ink-6 hover:text-ink-5 transition-colors duration-hover"
+        className="w-full grid gap-4 px-1 py-3.5 text-left text-body-sm text-ink-6 hover:text-ink-5 transition-colors duration-hover min-w-[380px]"
         style={{ gridTemplateColumns: '18px 1fr 90px 80px 40px' }}
       >
         <span />

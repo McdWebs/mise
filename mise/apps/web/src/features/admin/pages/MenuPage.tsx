@@ -81,7 +81,7 @@ export function MenuPage({ restaurant }: MenuPageProps) {
           />
 
           {/* Item table */}
-          <div>
+          <div className="min-w-0">
             {activeCategory ? (
               <MenuItemTable
                 items={items}
@@ -141,13 +141,14 @@ function MenuSkeleton() {
           </div>
 
           {/* Item table */}
-          <div>
-            <div className="grid gap-4 pb-3 border-b border-paper-3 mb-1" style={{ gridTemplateColumns: '1fr 90px 80px 40px' }}>
-              {['', '', '', ''].map((_, i) => <Sk key={i} className="h-3 w-full" />)}
+          <div className="min-w-0 overflow-x-auto">
+            <div className="grid gap-4 pb-3 border-b border-paper-3 mb-1 min-w-[380px]" style={{ gridTemplateColumns: '18px 1fr 90px 80px 40px' }}>
+              {['', '', '', '', ''].map((_, i) => <Sk key={i} className="h-3 w-full" />)}
             </div>
             <div className="space-y-px">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="grid gap-4 py-3 items-center" style={{ gridTemplateColumns: '1fr 90px 80px 40px' }}>
+                <div key={i} className="grid gap-4 py-3 items-center min-w-[380px]" style={{ gridTemplateColumns: '18px 1fr 90px 80px 40px' }}>
+                  <Sk className="h-4 w-3" />
                   <div className="space-y-1.5">
                     <Sk className="h-4 w-3/4" />
                     <Sk className="h-3 w-1/2" />
