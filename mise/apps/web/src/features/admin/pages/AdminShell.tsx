@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { MonitorPlay, UtensilsCrossed, Menu, X, LogOut } from 'lucide-react'
+import { MonitorPlay, UtensilsCrossed, Menu, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSession } from '@/features/auth/hooks/useSession'
@@ -179,7 +179,7 @@ export default function AdminShell() {
   const origin = window.location.origin
 
   // Sidebar / drawer nav body (shared between desktop sidebar and mobile drawer)
-  function SidebarNav({ onClose }: { onClose?: () => void }) {
+  function SidebarNav() {
     return (
       <>
         {/* Venue info */}
@@ -248,15 +248,6 @@ export default function AdminShell() {
             <MonitorPlay size={14} className="shrink-0" />
             Kitchen display
           </a>
-          {onClose && (
-            <button
-              onClick={() => { void supabase.auth.signOut() }}
-              className="flex w-full items-center gap-2 text-left text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover mt-1"
-            >
-              <LogOut size={14} className="shrink-0" />
-              Sign out
-            </button>
-          )}
         </div>
       </>
     )
@@ -338,7 +329,7 @@ export default function AdminShell() {
               <X size={18} />
             </button>
           </div>
-          <SidebarNav onClose={() => setMobileOpen(false)} />
+          <SidebarNav />
         </div>
       </div>
 
