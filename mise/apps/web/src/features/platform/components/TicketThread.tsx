@@ -170,7 +170,7 @@ export function TicketThread({ ticketId, restaurantId, restaurantName, ticketSta
             value={input}
             onChange={e => setInput(e.target.value)}
             onKeyDown={handleKey}
-            placeholder="Reply… (Enter to send)"
+            placeholder="Reply…"
             rows={1}
             className="flex-1 resize-none bg-paper-2 rounded-2 px-3 py-2 text-[13px] text-ink placeholder:text-ink-7 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-saffron/40"
             style={{ maxHeight: '72px', overflowY: 'auto' }}

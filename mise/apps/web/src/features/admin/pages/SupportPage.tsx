@@ -410,7 +410,7 @@ export function SupportPage({ restaurant }: SupportPageProps) {
               onChange={e => setNewBody(e.target.value)}
               placeholder="Describe what you need help with…"
               rows={5}
-              className="w-full resize-none bg-paper-2 rounded-2 px-3.5 py-3 text-[14px] text-ink placeholder:text-ink-7 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-saffron/40 leading-relaxed"
+              className="w-full resize-none bg-paper-2 rounded-2 px-3.5 py-3 text-base text-ink placeholder:text-ink-7 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-saffron/40 leading-relaxed"
             />
           </div>
 
@@ -515,9 +515,9 @@ export function SupportPage({ restaurant }: SupportPageProps) {
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={handleKey}
-              placeholder="Reply… (Enter to send, Shift+Enter for new line)"
+              placeholder="Reply…"
               rows={1}
-              className="flex-1 resize-none bg-paper-2 rounded-2 px-3 py-2.5 text-[14px] text-ink placeholder:text-ink-7 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-saffron/40 leading-relaxed"
+              className="flex-1 resize-none bg-paper-2 rounded-2 px-3 py-2.5 text-base text-ink placeholder:text-ink-7 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-saffron/40 leading-relaxed"
               style={{ maxHeight: '120px', overflowY: 'auto' }}
               onInput={e => {
                 const el = e.currentTarget
