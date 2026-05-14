@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { Loader2, Send, X, ShoppingCart, Check } from 'lucide-react'
+import { Send, X, ShoppingCart, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { AssistantMessageContent } from './AssistantMessageContent'
 import type { CartLineInput } from '../store/cartStore'
@@ -194,9 +194,6 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
       const decoder = new TextDecoder()
       let assistantContent = ''
 
-      // Append empty assistant message to stream into
-      setMessages(prev => [...prev, { role: 'assistant', content: '' }])
-
       while (true) {
         const { done, value } = await reader.read()
         if (done) break
@@ -214,7 +211,6 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
             }
 
             if (parsed.type === 'suggestions' && Array.isArray(parsed.items) && parsed.items.length > 0) {
-              // Attach suggestions to the last assistant message
               setMessages(prev => {
                 const updated = [...prev]
                 const last = updated[updated.length - 1]
@@ -229,8 +225,11 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
               setMessages(prev => {
                 const updated = [...prev]
                 const last = updated[updated.length - 1]
+                // Append to existing assistant bubble, or create one on first delta
                 if (last?.role === 'assistant') {
                   updated[updated.length - 1] = { ...last, content: assistantContent }
+                } else {
+                  updated.push({ role: 'assistant', content: assistantContent })
                 }
                 return updated
               })
@@ -326,8 +325,7 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
         <div className="flex-1 min-h-0 overflow-y-auto flex flex-col gap-3 pb-1">
           {messages.map((m, i) => {
             const isLastAssistant = m.role === 'assistant' && i === messages.length - 1
-            const showConnecting = isLastAssistant && awaitingReply && m.content === ''
-            const showStreaming = isLastAssistant && loading && !awaitingReply && m.content.length > 0
+            const showStreaming = isLastAssistant && loading && m.content.length > 0
 
             return (
               <div key={i} className={`flex flex-col ${m.role === 'assistant' ? 'items-start' : 'items-end'}`}>
@@ -341,12 +339,6 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
                   {m.role === 'assistant' ? (
                     <>
                       {m.content ? <AssistantMessageContent text={m.content} /> : null}
-                      {showConnecting && (
-                        <div className="flex items-center gap-2 text-ink-6 min-h-[1.25rem]" aria-live="polite" aria-busy="true">
-                          <Loader2 className="w-4 h-4 shrink-0 animate-spin" aria-hidden />
-                          <span className="text-[13px]">Checking the menu…</span>
-                        </div>
-                      )}
                       {showStreaming && (
                         <span
                           className="inline-block w-0.5 h-[1em] ml-0.5 align-[-0.15em] bg-ink animate-pulse rounded-sm"
@@ -378,6 +370,20 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
               </div>
             )
           })}
+
+          {/* Typing indicator — shown while waiting for the first token */}
+          {loading && messages[messages.length - 1]?.role === 'user' && (
+            <div className="flex items-start" aria-live="polite" aria-busy="true">
+              <div className="bg-paper-2 rounded-[14px_14px_14px_4px] px-4 py-3.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-ink-4 animate-bounce [animation-delay:0ms]" />
+                  <span className="w-2 h-2 rounded-full bg-ink-4 animate-bounce [animation-delay:150ms]" />
+                  <span className="w-2 h-2 rounded-full bg-ink-4 animate-bounce [animation-delay:300ms]" />
+                </div>
+              </div>
+            </div>
+          )}
+
           <div ref={bottomRef} />
         </div>
 
