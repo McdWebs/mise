@@ -2,10 +2,17 @@ import { useEffect, useState } from 'react'
 import { X } from 'lucide-react'
 import { supabasePlatform as supabase } from '@/lib/supabasePlatform'
 import { useQueryClient } from '@tanstack/react-query'
+import { usePlatformCurrency } from '../hooks/usePlatformCurrency'
 import type { FleetTenant } from '../hooks/useFleet'
 
-function fmtRevenue(cents: number): string {
-  return `$${(cents / 100).toLocaleString('en-CA', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+
+function fmtRevenue(cents: number, currency: string): string {
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(cents / 100)
 }
 
 function fmtLastSeen(iso: string | null): string {
@@ -28,6 +35,7 @@ interface TenantInspectorProps {
 
 export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
   const qc = useQueryClient()
+  const { currency: platformCurrency } = usePlatformCurrency()
   const open = tenant !== null
 
   // Local copy so changes reflect immediately without waiting for a refetch
@@ -134,7 +142,7 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
               <h3 className="text-overline text-ink-6 uppercase tracking-widest mb-2.5">Today</h3>
               {[
                 { k: 'Orders', v: String(tenant.ordersToday) },
-                { k: 'Revenue', v: fmtRevenue(tenant.revenueTodayCents) },
+                { k: 'Revenue', v: fmtRevenue(tenant.revenueTodayCents, platformCurrency) },
                 { k: 'Last seen', v: fmtLastSeen(tenant.lastSeenAt) },
                 { k: 'Errors (24h)', v: String(tenant.errors) },
               ].map(({ k, v }) => (
@@ -152,7 +160,7 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
                 {[
                   { label: 'Guest menu',  sub: `r/${tenant.slug}`, href: `/r/${tenant.slug}` },
                   { label: 'Kitchen',     sub: 'display board',    href: `/kitchen` },
-                  { label: 'Owner admin', sub: 'impersonate',      href: `/admin` },
+                  { label: 'Owner admin', sub: 'view as owner',    href: `/admin/enter?as=${tenant.id}` },
                 ].map(({ label, sub, href }) => (
                   <a
                     key={label}
@@ -172,15 +180,6 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
             <div className="py-3.5">
               <h3 className="text-overline text-ink-6 uppercase tracking-widest mb-3">Actions</h3>
               <div className="flex flex-wrap gap-2.5">
-                <button
-                  onClick={() => {
-                    alert('Re-publish triggered (stub — wire to deployment pipeline in phase 8).')
-                  }}
-                  className="px-3.5 py-2.5 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover"
-                >
-                  Force re-publish menu
-                </button>
-
                 {/* Suspend / Unsuspend */}
                 {!suspended ? (
                   confirming === 'suspend' ? (

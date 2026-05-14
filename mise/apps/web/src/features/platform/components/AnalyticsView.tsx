@@ -1,17 +1,60 @@
+import { useMemo, useState } from 'react'
 import { usePlatformAnalytics } from '../hooks/usePlatformAnalytics'
+import { usePlatformCurrency } from '../hooks/usePlatformCurrency'
+import { DatePicker } from '@/features/admin/components/DatePicker'
 import type { DayBucket, TopVenue } from '../hooks/usePlatformAnalytics'
 
-// ─── Formatters (all amounts already in ILS) ─────────────────────────────────
+// ─── Range helpers ────────────────────────────────────────────────────────────
 
-function fmtILS(cents: number): string {
-  const amount = cents / 100
-  if (amount >= 1_000_000) return `₪${(amount / 1_000_000).toFixed(1)}M`
-  if (amount >= 10_000)    return `₪${(amount / 1_000).toFixed(1)}k`
-  return `₪${amount.toLocaleString('he-IL', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
+type Range = 'today' | '7d' | '30d' | 'custom'
+
+const RANGE_LABELS: Record<Range, string> = {
+  today:  'Today',
+  '7d':   '7 days',
+  '30d':  '30 days',
+  custom: 'Custom',
 }
 
-function fmtILSExact(cents: number): string {
-  return `₪${(cents / 100).toLocaleString('he-IL', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+function presetSince(range: Exclude<Range, 'custom'>): string {
+  const d = new Date()
+  if (range === 'today') {
+    d.setHours(0, 0, 0, 0)
+  } else if (range === '7d') {
+    d.setDate(d.getDate() - 6)
+    d.setHours(0, 0, 0, 0)
+  } else {
+    d.setDate(d.getDate() - 29)
+    d.setHours(0, 0, 0, 0)
+  }
+  return d.toISOString()
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+// ─── Formatters ───────────────────────────────────────────────────────────────
+
+function ilsToTarget(ilsCents: number, currency: string, rates: Record<string, number>): number {
+  if (currency === 'ILS') return ilsCents
+  const rate = rates[currency]
+  if (!rate) return ilsCents
+  return Math.round(ilsCents * rate)
+}
+
+function fmtRevenue(ilsCents: number, currency: string, rates: Record<string, number>): string {
+  const cents = ilsToTarget(ilsCents, currency, rates)
+  const amount = cents / 100
+  const fmt = (n: number, digits = 0) =>
+    new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(n)
+  if (amount >= 1_000_000) return fmt(amount / 1_000_000, 1) + 'M'
+  if (amount >= 10_000)    return fmt(amount / 1_000, 1) + 'k'
+  return fmt(amount)
+}
+
+function fmtRevenueExact(ilsCents: number, currency: string, rates: Record<string, number>): string {
+  const cents = ilsToTarget(ilsCents, currency, rates)
+  return new Intl.NumberFormat(undefined, { style: 'currency', currency, minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(cents / 100)
 }
 
 function fmtDate(iso: string): string {
@@ -63,6 +106,9 @@ function BarChart({
   const values = data.map(getVal)
   const max = Math.max(...values, 1)
 
+  // X-axis labels: first, middle, last
+  const mid = Math.floor(data.length / 2)
+
   return (
     <div>
       <div className="flex items-end gap-[2px] h-20 mb-1.5">
@@ -89,19 +135,18 @@ function BarChart({
           )
         })}
       </div>
-      {/* X-axis: first, middle, last */}
       <div className="flex justify-between">
         <span className="font-mono text-[10px] text-ink-7">{data[0] ? fmtDate(data[0].date) : ''}</span>
-        <span className="font-mono text-[10px] text-ink-7">{data[14] ? fmtDate(data[14].date) : ''}</span>
-        <span className="font-mono text-[10px] text-ink-7">{data[29] ? fmtDate(data[29].date) : ''}</span>
+        <span className="font-mono text-[10px] text-ink-7">{data[mid] ? fmtDate(data[mid].date) : ''}</span>
+        <span className="font-mono text-[10px] text-ink-7">{data[data.length - 1] ? fmtDate(data[data.length - 1].date) : ''}</span>
       </div>
     </div>
   )
 }
 
-function TopVenuesTable({ venues, totalRevenue }: { venues: TopVenue[]; totalRevenue: number }) {
+function TopVenuesTable({ venues, currency, rates }: { venues: TopVenue[]; currency: string; rates: Record<string, number> }) {
   if (venues.length === 0) {
-    return <p className="text-body-sm text-ink-6 py-4">No orders recorded today.</p>
+    return <p className="text-body-sm text-ink-6 py-4">No orders in this period.</p>
   }
 
   return (
@@ -113,8 +158,8 @@ function TopVenuesTable({ venues, totalRevenue }: { venues: TopVenue[]; totalRev
             <div className="text-[14px] font-medium text-ink truncate">{v.name}</div>
             <div className="font-mono text-[11px] text-ink-6 truncate">
               /{v.slug}
-              {v.currency !== 'ILS' && (
-                <span className="ml-1.5 px-1 py-0.5 bg-paper-2 rounded-[4px] text-ink-7">{v.currency}→ILS</span>
+              {v.currency !== currency && (
+                <span className="ml-1.5 px-1 py-0.5 bg-paper-2 rounded-[4px] text-ink-7">{v.currency}→{currency}</span>
               )}
             </div>
           </div>
@@ -130,7 +175,7 @@ function TopVenuesTable({ venues, totalRevenue }: { venues: TopVenue[]; totalRev
             {v.orders}
           </span>
           <span className="font-mono text-[13px] font-semibold text-ink tabular-nums w-24 text-right shrink-0">
-            {fmtILSExact(v.revenueILSCents)}
+            {fmtRevenueExact(v.revenueILSCents, currency, rates)}
           </span>
         </div>
       ))}
@@ -161,7 +206,33 @@ function Skeleton() {
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 export function AnalyticsView() {
-  const { data: a, isLoading, dataUpdatedAt } = usePlatformAnalytics()
+  const [range, setRange]           = useState<Range>('today')
+  const [customFrom, setCustomFrom] = useState(() => todayISO())
+  const [customTo, setCustomTo]     = useState(() => todayISO())
+  const [appliedFrom, setAppliedFrom] = useState(customFrom)
+  const [appliedTo, setAppliedTo]     = useState(customTo)
+
+  const since = useMemo(() => {
+    if (range === 'custom') return `${appliedFrom}T00:00:00.000Z`
+    return presetSince(range as Exclude<Range, 'custom'>)
+  }, [range, appliedFrom])
+
+  const until = useMemo(() => {
+    if (range === 'custom') return `${appliedTo}T23:59:59.999Z`
+    return undefined
+  }, [range, appliedTo])
+
+  const { data: a, isLoading, dataUpdatedAt } = usePlatformAnalytics(since, until)
+  const { currency } = usePlatformCurrency()
+  const rates = a?.rates ?? {}
+
+  const periodLabel = useMemo(() => {
+    if (range === 'today')  return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
+    if (range === '7d')     return 'Last 7 days'
+    if (range === '30d')    return 'Last 30 days'
+    if (appliedFrom === appliedTo) return new Date(appliedFrom + 'T00:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
+    return `${new Date(appliedFrom + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${new Date(appliedTo + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+  }, [range, appliedFrom, appliedTo])
 
   const lastSync = dataUpdatedAt
     ? new Date(dataUpdatedAt).toLocaleTimeString('en-CA', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
@@ -169,8 +240,8 @@ export function AnalyticsView() {
 
   if (isLoading || !a) return <Skeleton />
 
-  const today = new Date().toLocaleDateString('en-CA', { weekday: 'long', month: 'long', day: 'numeric' })
   const liveRatio = a.totalVenues > 0 ? Math.round((a.liveVenues / a.totalVenues) * 100) : 0
+  const showChart = range !== 'today' && a.daily.length > 1
 
   const ratesNote = a.ratesUpdatedAt
     ? `Rates updated ${new Date(a.ratesUpdatedAt).toLocaleDateString('en-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}`
@@ -178,47 +249,93 @@ export function AnalyticsView() {
 
   return (
     <div>
-      {/* Page header */}
-      <div className="flex items-baseline justify-between mb-6">
-        <div>
-          <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
-            Analytics
-          </h1>
-          <div className="text-body-sm text-ink-6 mt-0.5">
-            Today · {today} · synced {lastSync}
+      {/* Page header + range selector */}
+      <div className="mb-6 space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6 min-w-0">
+          <div className="min-w-0">
+            <h1 className="font-display text-[30px] font-[500] text-ink tracking-[-0.01em] font-optical">
+              Analytics
+            </h1>
+            <div className="text-body-sm text-ink-6 mt-0.5">
+              {periodLabel} · synced {lastSync}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0 flex-wrap sm:flex-nowrap">
+            {/* Currency note */}
+            <div className="text-right hidden sm:block">
+              <div className="text-overline text-ink-6 uppercase tracking-widest">All amounts in {currency}</div>
+              <div className="font-mono text-[11px] text-ink-7 mt-0.5">{ratesNote}</div>
+            </div>
+
+            {/* Range tabs */}
+            <div className="flex items-center gap-1 rounded-2 bg-paper-2 p-1">
+              {(Object.keys(RANGE_LABELS) as Range[]).map(r => (
+                <button
+                  key={r}
+                  onClick={() => setRange(r)}
+                  className={`shrink-0 px-2.5 py-1.5 rounded-[6px] text-[13px] font-semibold transition-colors duration-hover ${
+                    range === r ? 'bg-paper text-ink shadow-1' : 'text-ink-5 hover:text-ink'
+                  }`}
+                >
+                  {RANGE_LABELS[r]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-        {/* Currency note */}
-        <div className="text-right">
-          <div className="text-overline text-ink-6 uppercase tracking-widest">All amounts in ILS (₪)</div>
-          <div className="font-mono text-[11px] text-ink-7 mt-0.5">{ratesNote}</div>
-        </div>
+
+        {range === 'custom' && (
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:flex-wrap">
+            <DatePicker
+              value={customFrom}
+              max={customTo}
+              onChange={v => setCustomFrom(v)}
+              placeholder="From"
+            />
+            <span className="text-body-sm text-ink-6 hidden sm:inline">to</span>
+            <DatePicker
+              value={customTo}
+              min={customFrom}
+              max={todayISO()}
+              onChange={v => setCustomTo(v)}
+              placeholder="To"
+            />
+            <button
+              type="button"
+              onClick={() => { setAppliedFrom(customFrom); setAppliedTo(customTo) }}
+              className="w-full sm:w-auto px-3 py-1.5 rounded-2 bg-saffron text-paper text-body-sm font-semibold hover:bg-saffron-2 transition-colors duration-hover"
+            >
+              Apply
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Today KPIs */}
-      <p className="text-overline text-ink-6 uppercase tracking-widest mb-2.5">Today</p>
+      {/* Period KPIs */}
+      <p className="text-overline text-ink-6 uppercase tracking-widest mb-2.5">Period</p>
       <div className="grid grid-cols-4 gap-3 mb-3">
         <KpiTile
-          label="Orders today"
-          value={String(a.ordersToday)}
-          sub={`${a.cancelledToday} cancelled`}
+          label="Orders"
+          value={String(a.orders)}
+          sub={`${a.cancelled} cancelled`}
         />
         <KpiTile
-          label="Revenue today"
-          value={fmtILS(a.revenueILSTodayCents)}
-          sub={fmtILSExact(a.revenueILSTodayCents)}
+          label="Revenue"
+          value={fmtRevenue(a.revenueILSCents, currency, rates)}
+          sub={fmtRevenueExact(a.revenueILSCents, currency, rates)}
           accent="saffron"
         />
         <KpiTile
           label="Avg ticket"
-          value={a.avgTicketILSCents > 0 ? fmtILSExact(a.avgTicketILSCents) : '—'}
+          value={a.avgTicketILSCents > 0 ? fmtRevenueExact(a.avgTicketILSCents, currency, rates) : '—'}
           sub="per order"
         />
         <KpiTile
           label="Active venues"
-          value={String(a.activeVenuesToday)}
+          value={String(a.activeVenues)}
           sub={`of ${a.liveVenues} live`}
-          accent={a.activeVenuesToday > 0 ? 'herb' : undefined}
+          accent={a.activeVenues > 0 ? 'herb' : undefined}
         />
       </div>
 
@@ -238,47 +355,49 @@ export function AnalyticsView() {
           accent={a.pausedVenues > 0 ? 'ember' : undefined}
         />
         <KpiTile
-          label="This week"
-          value={fmtILS(a.revenueILSThisWeekCents)}
-          sub={`${a.ordersThisWeek} orders`}
-          accent="saffron"
+          label="Cancelled"
+          value={String(a.cancelled)}
+          sub={a.orders + a.cancelled > 0 ? `${Math.round((a.cancelled / (a.orders + a.cancelled)) * 100)}% cancel rate` : undefined}
+          accent={a.cancelled > 0 ? 'ember' : undefined}
         />
       </div>
 
-      {/* 30-day charts */}
-      <div className="grid grid-cols-2 gap-4 mb-7">
-        <div className="bg-paper border border-paper-3 rounded-3 p-5">
-          <div className="flex items-baseline justify-between mb-4">
-            <h2 className="font-display text-[18px] font-[500] text-ink tracking-[-0.005em] font-optical">
-              Orders / day
-            </h2>
-            <span className="font-mono text-[13px] text-ink-6 tabular-nums">{a.ordersLast30} total</span>
+      {/* Charts — hidden for today (no meaningful day-level chart) */}
+      {showChart && (
+        <div className="grid grid-cols-2 gap-4 mb-7">
+          <div className="bg-paper border border-paper-3 rounded-3 p-5">
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 className="font-display text-[18px] font-[500] text-ink tracking-[-0.005em] font-optical">
+                Orders / day
+              </h2>
+              <span className="font-mono text-[13px] text-ink-6 tabular-nums">{a.orders} total</span>
+            </div>
+            <BarChart
+              data={a.daily}
+              getVal={d => d.orders}
+              color="bg-ink-3"
+              formatTip={d => `${d.orders} order${d.orders !== 1 ? 's' : ''}`}
+            />
           </div>
-          <BarChart
-            data={a.daily30}
-            getVal={d => d.orders}
-            color="bg-ink-3"
-            formatTip={d => `${d.orders} order${d.orders !== 1 ? 's' : ''}`}
-          />
-        </div>
 
-        <div className="bg-paper border border-paper-3 rounded-3 p-5">
-          <div className="flex items-baseline justify-between mb-4">
-            <h2 className="font-display text-[18px] font-[500] text-ink tracking-[-0.005em] font-optical">
-              Revenue / day
-            </h2>
-            <span className="font-mono text-[13px] text-ink-6 tabular-nums">
-              {fmtILS(a.revenueILSLast30Cents)} total
-            </span>
+          <div className="bg-paper border border-paper-3 rounded-3 p-5">
+            <div className="flex items-baseline justify-between mb-4">
+              <h2 className="font-display text-[18px] font-[500] text-ink tracking-[-0.005em] font-optical">
+                Revenue / day
+              </h2>
+              <span className="font-mono text-[13px] text-ink-6 tabular-nums">
+                {fmtRevenue(a.revenueILSCents, currency, rates)} total
+              </span>
+            </div>
+            <BarChart
+              data={a.daily}
+              getVal={d => d.revenueILSCents}
+              color="bg-saffron"
+              formatTip={d => fmtRevenueExact(d.revenueILSCents, currency, rates)}
+            />
           </div>
-          <BarChart
-            data={a.daily30}
-            getVal={d => d.revenueILSCents}
-            color="bg-saffron"
-            formatTip={d => fmtILSExact(d.revenueILSCents)}
-          />
         </div>
-      </div>
+      )}
 
       {/* Bottom row */}
       <div className="grid grid-cols-3 gap-4">
@@ -286,14 +405,14 @@ export function AnalyticsView() {
         <div className="col-span-2 bg-paper border border-paper-3 rounded-3 p-5">
           <div className="flex items-center justify-between mb-1">
             <h2 className="font-display text-[18px] font-[500] text-ink tracking-[-0.005em] font-optical">
-              Top venues today
+              Top venues
             </h2>
             <div className="flex gap-6 text-overline text-ink-6 uppercase tracking-widest text-[10px] pr-1">
               <span>Orders</span>
-              <span>Revenue (ILS)</span>
+              <span>Revenue ({currency})</span>
             </div>
           </div>
-          <TopVenuesTable venues={a.topVenues} totalRevenue={a.revenueILSTodayCents} />
+          <TopVenuesTable venues={a.topVenues} currency={currency} rates={rates} />
         </div>
 
         {/* Fleet health */}
@@ -315,11 +434,11 @@ export function AnalyticsView() {
 
           <div className="space-y-2.5">
             {[
-              { label: 'Total venues',      value: String(a.totalVenues) },
-              { label: 'Active today',      value: String(a.activeVenuesToday) },
-              { label: 'Idle today',        value: String(a.liveVenues - a.activeVenuesToday) },
-              { label: 'Orders (30 days)',  value: String(a.ordersLast30) },
-              { label: 'Revenue (30 days)', value: fmtILS(a.revenueILSLast30Cents) },
+              { label: 'Total venues',  value: String(a.totalVenues) },
+              { label: 'Active period', value: String(a.activeVenues) },
+              { label: 'Idle period',   value: String(a.liveVenues - a.activeVenues) },
+              { label: 'Orders',        value: String(a.orders) },
+              { label: 'Revenue',       value: fmtRevenue(a.revenueILSCents, currency, rates) },
             ].map(({ label, value }) => (
               <div key={label} className="flex items-center justify-between text-body-sm">
                 <span className="text-ink-6">{label}</span>

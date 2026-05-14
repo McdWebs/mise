@@ -18,61 +18,54 @@ export interface TopVenue {
 }
 
 export interface PlatformAnalytics {
+  // Fleet — always current state
   totalVenues: number
   liveVenues: number
   pausedVenues: number
-  ordersToday: number
-  revenueILSTodayCents: number
+  // Period KPIs
+  orders: number
+  revenueILSCents: number
   avgTicketILSCents: number
-  cancelledToday: number
-  ordersThisWeek: number
-  revenueILSThisWeekCents: number
-  ordersLast30: number
-  revenueILSLast30Cents: number
-  activeVenuesToday: number
-  daily30: DayBucket[]
+  cancelled: number
+  activeVenues: number
+  // Daily chart buckets for the period
+  daily: DayBucket[]
+  // Top 5 venues by revenue in period
   topVenues: TopVenue[]
+  // Exchange rates (ILS base)
   ratesUpdatedAt: string | null
+  rates: Record<string, number>
 }
 
-function isoForDaysAgo(n: number): string {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  d.setDate(d.getDate() - n)
-  return d.toISOString()
-}
-
-// 1 ILS = rates[currency] of that currency.
-// So to convert X units of `currency` → ILS: X / rates[currency]
+// 1 ILS = rates[currency] of that currency → to convert X of currency → ILS: X / rates[currency]
 function makeConverter(rates: Record<string, number>) {
   return function toILSCents(cents: number, currency: string): number {
     if (!currency || currency === 'ILS') return cents
     const rate = rates[currency]
-    if (!rate) return cents  // unknown currency — treat as ILS (safe fallback)
+    if (!rate) return cents
     return Math.round(cents / rate)
   }
 }
 
-export function usePlatformAnalytics() {
+export function usePlatformAnalytics(since: string, until?: string) {
   return useQuery<PlatformAnalytics>({
-    queryKey: ['platform-analytics'],
+    queryKey: ['platform-analytics', since, until ?? 'now'],
     queryFn: async () => {
-      const since30   = isoForDaysAgo(29)
-      const sinceToday = isoForDaysAgo(0)
-      const sinceWeek  = isoForDaysAgo(6)
+      let ordersQuery = supabase
+        .from('orders')
+        .select('restaurant_id, subtotal_cents, stage, created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: true })
 
-      // Fetch restaurants, orders and live exchange rates in parallel
+      if (until) ordersQuery = ordersQuery.lte('created_at', until)
+
       const [
         { data: restaurants, error: rErr },
         { data: orders, error: oErr },
         ratesPayload,
       ] = await Promise.all([
         supabase.from('restaurants').select('id, name, slug, accepting_orders, currency'),
-        supabase
-          .from('orders')
-          .select('restaurant_id, subtotal_cents, stage, created_at')
-          .gte('created_at', since30)
-          .order('created_at', { ascending: true }),
+        ordersQuery,
         fetch('https://open.er-api.com/v6/latest/ILS')
           .then(r => r.json())
           .catch(() => null) as Promise<{ rates: Record<string, number>; time_last_update_utc?: string } | null>,
@@ -97,49 +90,43 @@ export function usePlatformAnalytics() {
 
       const restMap = new Map(rests.map(r => [r.id, r]))
 
-      // Helper: convert an order row to ILS cents
       function orderToILS(o: OrdRow): number {
         const currency = restMap.get(o.restaurant_id)?.currency ?? 'ILS'
         return toILSCents(o.subtotal_cents, currency)
       }
 
-      // Today
-      const todayAll    = ords.filter(o => o.created_at >= sinceToday)
-      const todayActive = todayAll.filter(o => o.stage !== 'cancelled')
-      const ordersToday            = todayActive.length
-      const cancelledToday         = todayAll.filter(o => o.stage === 'cancelled').length
-      const revenueILSTodayCents   = todayActive.reduce((s, o) => s + orderToILS(o), 0)
-      const avgTicketILSCents      = ordersToday > 0 ? Math.round(revenueILSTodayCents / ordersToday) : 0
-      const activeVenuesToday      = new Set(todayActive.map(o => o.restaurant_id)).size
+      const active    = ords.filter(o => o.stage !== 'cancelled')
+      const cancelled = ords.filter(o => o.stage === 'cancelled').length
 
-      // This week
-      const weekActive               = ords.filter(o => o.created_at >= sinceWeek && o.stage !== 'cancelled')
-      const ordersThisWeek           = weekActive.length
-      const revenueILSThisWeekCents  = weekActive.reduce((s, o) => s + orderToILS(o), 0)
+      const revenueILSCents    = active.reduce((s, o) => s + orderToILS(o), 0)
+      const avgTicketILSCents  = active.length > 0 ? Math.round(revenueILSCents / active.length) : 0
+      const activeVenues       = new Set(active.map(o => o.restaurant_id)).size
 
-      // Last 30 days
-      const last30Active        = ords.filter(o => o.stage !== 'cancelled')
-      const ordersLast30        = last30Active.length
-      const revenueILSLast30Cents = last30Active.reduce((s, o) => s + orderToILS(o), 0)
-
-      // 30-day daily buckets
-      const daily30: DayBucket[] = []
-      for (let i = 29; i >= 0; i--) {
-        const d = new Date()
-        d.setHours(0, 0, 0, 0)
-        d.setDate(d.getDate() - i)
-        const dateStr = d.toISOString().slice(0, 10)
-        const dayOrds = ords.filter(o => o.created_at.slice(0, 10) === dateStr && o.stage !== 'cancelled')
-        daily30.push({
-          date: dateStr,
-          orders: dayOrds.length,
-          revenueILSCents: dayOrds.reduce((s, o) => s + orderToILS(o), 0),
-        })
+      // Daily buckets — group active orders by date
+      const bucketMap = new Map<string, { orders: number; revenueILSCents: number }>()
+      for (const o of active) {
+        const date = o.created_at.slice(0, 10)
+        const ex = bucketMap.get(date) ?? { orders: 0, revenueILSCents: 0 }
+        bucketMap.set(date, { orders: ex.orders + 1, revenueILSCents: ex.revenueILSCents + orderToILS(o) })
       }
 
-      // Top venues by ILS revenue today
+      // Build a contiguous date array from since → until (or today)
+      const fromDate  = new Date(since.slice(0, 10) + 'T00:00:00')
+      const toDate    = until ? new Date(until.slice(0, 10) + 'T00:00:00') : new Date()
+      toDate.setHours(0, 0, 0, 0)
+
+      const daily: DayBucket[] = []
+      const cur = new Date(fromDate)
+      while (cur <= toDate) {
+        const dateStr = cur.toISOString().slice(0, 10)
+        const b = bucketMap.get(dateStr) ?? { orders: 0, revenueILSCents: 0 }
+        daily.push({ date: dateStr, ...b })
+        cur.setDate(cur.getDate() + 1)
+      }
+
+      // Top 5 venues by revenue
       const venueMap = new Map<string, { orders: number; revenueILSCents: number }>()
-      for (const o of todayActive) {
+      for (const o of active) {
         const ex = venueMap.get(o.restaurant_id) ?? { orders: 0, revenueILSCents: 0 }
         venueMap.set(o.restaurant_id, {
           orders: ex.orders + 1,
@@ -156,9 +143,7 @@ export function usePlatformAnalytics() {
             slug: r?.slug ?? '',
             currency: r?.currency ?? 'ILS',
             ...stats,
-            pctOfRevenue: revenueILSTodayCents > 0
-              ? (stats.revenueILSCents / revenueILSTodayCents) * 100
-              : 0,
+            pctOfRevenue: revenueILSCents > 0 ? (stats.revenueILSCents / revenueILSCents) * 100 : 0,
           }
         })
         .sort((a, b) => b.revenueILSCents - a.revenueILSCents)
@@ -168,18 +153,15 @@ export function usePlatformAnalytics() {
         totalVenues,
         liveVenues,
         pausedVenues,
-        ordersToday,
-        revenueILSTodayCents,
+        orders: active.length,
+        revenueILSCents,
         avgTicketILSCents,
-        cancelledToday,
-        ordersThisWeek,
-        revenueILSThisWeekCents,
-        ordersLast30,
-        revenueILSLast30Cents,
-        activeVenuesToday,
-        daily30,
+        cancelled,
+        activeVenues,
+        daily,
         topVenues,
         ratesUpdatedAt,
+        rates,
       }
     },
     staleTime: 1000 * 60 * 2,

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { NavLink, Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router-dom'
 import { MonitorPlay, UtensilsCrossed, Menu, X } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
@@ -111,7 +111,9 @@ function Spinner() {
 
 export default function AdminShell() {
   const { user } = useSession()
-  const { data: restaurant, isLoading } = useAdminRestaurant(user?.id)
+  const [searchParams] = useSearchParams()
+  const impersonatingId = searchParams.get('as') ?? undefined
+  const { data: restaurant, isLoading } = useAdminRestaurant(user?.id, impersonatingId)
   const location = useLocation()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [supportUnread, setSupportUnread] = useState(0)
@@ -335,12 +337,26 @@ export default function AdminShell() {
 
       {/* ── Main content ─────────────────────────────────────────────────── */}
       <main className="flex-1 min-w-0 px-4 pt-[72px] pb-6 md:px-9 md:py-7 md:pt-7 md:pb-7 max-w-[1200px] w-full">
-        {restaurant.suspended
-          ? <SuspendedBanner />
-          : !restaurant.accepting_orders
-          ? <PausedBanner restaurant={restaurant} userId={user!.id} />
-          : null
-        }
+        {impersonatingId && (
+          <div className="mb-6 rounded-3 border border-saffron/40 bg-saffron-wash px-5 py-3 flex items-center justify-between gap-4">
+            <p className="text-body-sm text-ink-5">
+              Viewing <span className="font-semibold text-ink">{restaurant.name}</span> as platform admin
+            </p>
+            <button
+              onClick={() => window.close()}
+              className="shrink-0 text-body-sm text-ink-6 hover:text-ink transition-colors duration-hover"
+            >
+              Close tab
+            </button>
+          </div>
+        )}
+        {!impersonatingId && (
+          restaurant.suspended
+            ? <SuspendedBanner />
+            : !restaurant.accepting_orders
+            ? <PausedBanner restaurant={restaurant} userId={user!.id} />
+            : null
+        )}
         <Routes>
           <Route index element={<Navigate to="overview" replace />} />
           <Route path="overview"  element={<OverviewPage  restaurant={restaurant} />} />

@@ -11,6 +11,7 @@ const KitchenPage = lazy(() => import('./features/kitchen/pages/KitchenPage'))
 const AdminShell = lazy(() => import('./features/admin/pages/AdminShell'))
 const PlatformPage = lazy(() => import('./features/platform/pages/PlatformPage'))
 const PlatformLoginPage = lazy(() => import('./features/platform/pages/PlatformLoginPage'))
+const AdminEnterPage = lazy(() => import('./features/admin/pages/AdminEnterPage').then(m => ({ default: m.AdminEnterPage })))
 
 const TABLECLOTH_BG = {
   backgroundImage: 'url(/assets/pattern-tablecloth.svg)',
@@ -39,6 +40,9 @@ export default function App() {
 
         {/* Kitchen — no login, opened from admin */}
         <Route path="/kitchen" element={<KitchenPage />} />
+
+        {/* Platform admin impersonation entry — must be before the guarded /admin/* */}
+        <Route path="/admin/enter" element={<AdminEnterPage />} />
 
         {/* Admin */}
         <Route
