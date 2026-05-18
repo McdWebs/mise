@@ -14,7 +14,9 @@ interface TableCardProps {
 
 export function TableCard({ table, onClick }: TableCardProps) {
   const isMergedSecondary = !!table.status?.merged_into
-  const isOccupied = !!table.status?.occupied_since || table.active_order_count > 0 || table.has_session_order
+  const hasGuestSession = !!table.status?.occupied_since || table.has_session_order
+  const hasKitchenOrders = table.active_order_count > 0
+  const isOccupied = hasGuestSession
   const needsWaiter = table.has_pending_call
 
   let borderClass = 'border-ink-3 hover:border-ink-5'
@@ -59,7 +61,7 @@ export function TableCard({ table, onClick }: TableCardProps) {
         <span className="text-[12px] text-ink-7 truncate">{table.status.waiter_name}</span>
       )}
 
-      {isOccupied && !isMergedSecondary && (
+      {hasKitchenOrders && !isMergedSecondary && (
         <div className="flex items-center gap-1 mt-auto pt-1">
           {Object.entries(table.active_order_stages).flatMap(([stage, count]) =>
             Array.from({ length: count }).map((_, i) => (

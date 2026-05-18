@@ -97,11 +97,12 @@ interface TableDrawerProps {
   restaurantSlug: string
   calls: WaiterCall[]
   onAckCall: (id: string) => Promise<void>
+  onAckCallsForTable?: (tableLabel: string) => Promise<void>
   onClose: () => void
   onMutated?: () => void | Promise<void>
 }
 
-export function TableDrawer({ table, allTables, restaurantId, restaurantSlug, calls, onAckCall, onClose, onMutated }: TableDrawerProps) {
+export function TableDrawer({ table, allTables, restaurantId, restaurantSlug, calls, onAckCall, onAckCallsForTable, onClose, onMutated }: TableDrawerProps) {
   const open = table !== null
   /** `table` from parent is a new object on every useTables refetch; memoize query inputs so the fetch effect does not re-run. */
   const mergedLabelsSig = table?.merged_secondary_labels.join('\x1e') ?? ''
@@ -273,23 +274,46 @@ export function TableDrawer({ table, allTables, restaurantId, restaurantSlug, ca
     setSaving(true)
     setSaveError(null)
     const now = new Date().toISOString()
-    const w = await upsertTableStatus(table.id, restaurantId, { waiter_name: null, cleared_at: now, occupied_since: null })
-    if (w.error) {
-      setSaveError(w.error.message)
-      setSaving(false)
-      return
-    }
-    for (const sid of table.merged_secondary_ids) {
-      const u = await upsertTableStatus(sid, restaurantId, { merged_into: null })
-      if (u.error) {
-        setSaveError(u.error.message)
-        setSaving(false)
+    try {
+      const w = await upsertTableStatus(table.id, restaurantId, {
+        waiter_name: null,
+        cleared_at: now,
+        occupied_since: null,
+      })
+      if (w.error) {
+        setSaveError(w.error.message)
         return
       }
+
+      for (const sid of table.merged_secondary_ids) {
+        const cleared = await upsertTableStatus(sid, restaurantId, {
+          cleared_at: now,
+          occupied_since: null,
+          waiter_name: null,
+        })
+        if (cleared.error) {
+          setSaveError(cleared.error.message)
+          return
+        }
+        const u = await upsertTableStatus(sid, restaurantId, { merged_into: null })
+        if (u.error) {
+          setSaveError(u.error.message)
+          return
+        }
+      }
+
+      const labels = [table.label, ...table.merged_secondary_labels]
+      for (const label of labels) {
+        await onAckCallsForTable?.(label)
+      }
+
+      setWaiterName('')
+      await notifyMutated()
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : 'Could not clear table.')
+    } finally {
+      setSaving(false)
     }
-    await notifyMutated()
-    setSaving(false)
-    onClose()
   }
 
   async function deleteTable() {

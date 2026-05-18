@@ -186,7 +186,7 @@ function TopVenuesTable({ venues, currency, rates }: { venues: TopVenue[]; curre
 function Skeleton() {
   return (
     <div className="animate-pulse space-y-7">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {Array.from({ length: 8 }).map((_, i) => (
           <div key={i} className="bg-paper border border-paper-3 rounded-3 p-4 space-y-3">
             <div className="h-3 bg-paper-3 rounded-2 w-20" />
@@ -195,7 +195,7 @@ function Skeleton() {
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="bg-paper border border-paper-3 rounded-3 p-5 h-48" />
         <div className="bg-paper border border-paper-3 rounded-3 p-5 h-48" />
       </div>
@@ -314,7 +314,7 @@ export function AnalyticsView() {
 
       {/* Period KPIs */}
       <p className="text-overline text-ink-6 uppercase tracking-widest mb-2.5">Period</p>
-      <div className="grid grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
         <KpiTile
           label="Orders"
           value={String(a.orders)}
@@ -341,7 +341,7 @@ export function AnalyticsView() {
 
       {/* Fleet KPIs */}
       <p className="text-overline text-ink-6 uppercase tracking-widest mb-2.5 mt-5">Fleet</p>
-      <div className="grid grid-cols-4 gap-3 mb-7">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-7">
         <KpiTile label="Total venues" value={String(a.totalVenues)} />
         <KpiTile
           label="Live"
@@ -364,7 +364,7 @@ export function AnalyticsView() {
 
       {/* Charts — hidden for today (no meaningful day-level chart) */}
       {showChart && (
-        <div className="grid grid-cols-2 gap-4 mb-7">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-7">
           <div className="bg-paper border border-paper-3 rounded-3 p-5">
             <div className="flex items-baseline justify-between mb-4">
               <h2 className="font-display text-[18px] font-[500] text-ink tracking-[-0.005em] font-optical">
@@ -400,9 +400,9 @@ export function AnalyticsView() {
       )}
 
       {/* Bottom row */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Top venues */}
-        <div className="col-span-2 bg-paper border border-paper-3 rounded-3 p-5">
+        <div className="col-span-1 lg:col-span-2 bg-paper border border-paper-3 rounded-3 p-5">
           <div className="flex items-center justify-between mb-1">
             <h2 className="font-display text-[18px] font-[500] text-ink tracking-[-0.005em] font-optical">
               Top venues

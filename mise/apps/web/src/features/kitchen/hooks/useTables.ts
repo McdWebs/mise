@@ -83,8 +83,24 @@ export async function upsertTableStatus(
   if ('occupied_since' in patch) updates.occupied_since = patch.occupied_since
 
   if (existing) {
-    const { error } = await supabase.from('table_status').update(updates).eq('table_id', tableId)
-    return { error }
+    const { data, error } = await supabase
+      .from('table_status')
+      .update(updates)
+      .eq('table_id', tableId)
+      .select('table_id')
+      .maybeSingle()
+    if (error) return { error }
+    if (!data) {
+      return {
+        error: {
+          message: 'Could not update table status — check your permissions.',
+          code: 'PGRST116',
+          details: '',
+          hint: '',
+        } as PostgrestError,
+      }
+    }
+    return { error: null }
   }
 
   type StatusInsert = Database['public']['Tables']['table_status']['Insert']
@@ -98,8 +114,19 @@ export async function upsertTableStatus(
     occupied_since: 'occupied_since' in patch ? patch.occupied_since ?? null : null,
     updated_at,
   }
-  const { error } = await supabase.from('table_status').insert(insert)
-  return { error }
+  const { data, error } = await supabase.from('table_status').insert(insert).select('table_id').maybeSingle()
+  if (error) return { error }
+  if (!data) {
+    return {
+      error: {
+        message: 'Could not save table status — check your permissions.',
+        code: 'PGRST116',
+        details: '',
+        hint: '',
+      } as PostgrestError,
+    }
+  }
+  return { error: null }
 }
 
 export function useTables(restaurantId: string | undefined) {

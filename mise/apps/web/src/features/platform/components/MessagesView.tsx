@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ArrowLeft, Sparkles } from 'lucide-react'
 import { supabasePlatform as supabase } from '@/lib/supabasePlatform'
 import { TicketThread } from './TicketThread'
 
@@ -19,6 +20,7 @@ interface SupportTicket {
   restaurant_id: string
   topic: string
   status: 'open' | 'closed'
+  source?: 'user' | 'ai'
   created_at: string
 }
 
@@ -26,7 +28,7 @@ interface SupportMessage {
   id: string
   ticket_id: string | null
   restaurant_id: string
-  sender_role: 'owner' | 'platform'
+  sender_role: 'owner' | 'platform' | 'ai'
   body: string
   read_at: string | null
   created_at: string
@@ -45,6 +47,7 @@ interface TicketRow {
   suspended: boolean
   topic: string
   status: 'open' | 'closed'
+  source: 'user' | 'ai'
   lastBody: string
   lastAt: string
   unreadCount: number
@@ -81,7 +84,7 @@ function buildTicketList(
       const msgs = msgsByTicket.get(ticket.id) ?? []
       const sorted = [...msgs].sort((a, b) => b.created_at.localeCompare(a.created_at))
       const last = sorted[0]
-      const unread = msgs.filter(m => m.sender_role === 'owner' && !m.read_at).length
+      const unread = ticket.source === 'ai' ? 0 : msgs.filter(m => m.sender_role === 'owner' && !m.read_at).length
       return {
         id: ticket.id,
         restaurantId: ticket.restaurant_id,
@@ -89,6 +92,7 @@ function buildTicketList(
         suspended: r?.suspended ?? false,
         topic: ticket.topic,
         status: ticket.status,
+        source: ticket.source ?? 'user',
         lastBody: last?.body ?? '',
         lastAt: last?.created_at ?? ticket.created_at,
         unreadCount: unread,
@@ -98,19 +102,22 @@ function buildTicketList(
 }
 
 type StatusFilter = 'open' | 'closed' | 'all'
+type SourceTab = 'user' | 'ai'
 
 export function MessagesView() {
   const [tickets, setTickets] = useState<TicketRow[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('open')
+  const [sourceTab, setSourceTab] = useState<SourceTab>('user')
   const [closing, setClosing] = useState(false)
+  const [mobilePane, setMobilePane] = useState<'list' | 'thread'>('list')
 
   async function fetchAll(keepSelected = true) {
     const [{ data: ticketData }, { data: msgData }, { data: restaurants }] = await Promise.all([
       supabase
         .from('support_tickets')
-        .select('id, restaurant_id, topic, status, created_at')
+        .select('*')
         .order('created_at', { ascending: false }),
       supabase
         .from('support_messages')
@@ -127,8 +134,9 @@ export function MessagesView() {
     setTickets(rows)
 
     if (!keepSelected || !selected) {
-      const firstUnread = rows.find(t => t.unreadCount > 0 && t.status === 'open')
-      setSelected(firstUnread?.id ?? rows.find(t => t.status === 'open')?.id ?? rows[0]?.id ?? null)
+      const userRows = rows.filter(r => r.source === 'user')
+      const firstUnread = userRows.find(t => t.unreadCount > 0 && t.status === 'open')
+      setSelected(firstUnread?.id ?? userRows.find(t => t.status === 'open')?.id ?? userRows[0]?.id ?? null)
     }
     setLoading(false)
   }
@@ -162,26 +170,56 @@ export function MessagesView() {
     setClosing(false)
   }
 
-  const filtered = tickets.filter(t =>
-    statusFilter === 'all' ? true : t.status === statusFilter
+  const sourcedTickets = tickets.filter(t => t.source === sourceTab)
+  const filtered = sourcedTickets.filter(t =>
+    sourceTab === 'ai' || (statusFilter === 'all' ? true : t.status === statusFilter)
   )
 
   const selectedTicket = tickets.find(t => t.id === selected)
 
   return (
-    <div className="flex gap-0 h-[calc(100dvh-57px)] -mx-8 -my-7">
+    <div className="flex h-[calc(100dvh-57px)] -mx-4 -my-4 md:-mx-8 md:-my-7 overflow-hidden">
 
       {/* Left: ticket list */}
-      <div className="w-[300px] shrink-0 border-r border-paper-3 flex flex-col overflow-hidden">
+      <div className={`${mobilePane === 'thread' ? 'hidden md:flex' : 'flex'} flex-col w-full md:w-[300px] shrink-0 border-r border-paper-3 overflow-hidden`}>
         <div className="px-5 py-4 border-b border-paper-3 shrink-0">
           <h2 className="font-display text-[20px] font-[500] text-ink tracking-[-0.01em] font-optical">Messages</h2>
-          <p className="text-[12px] text-ink-6 mt-0.5">
-            {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}
-          </p>
         </div>
 
-        {/* Status filter */}
-        <div className="flex gap-1 px-3 py-2.5 border-b border-paper-3 shrink-0">
+        {/* Source tab */}
+        <div className="flex gap-1 px-3 pt-2.5 pb-1.5 shrink-0">
+          <button
+            onClick={() => {
+              setSourceTab('user')
+              setMobilePane('list')
+              const userRows = tickets.filter(r => r.source === 'user')
+              setSelected(userRows.find(t => t.unreadCount > 0)?.id ?? userRows.find(t => t.status === 'open')?.id ?? userRows[0]?.id ?? null)
+            }}
+            className={`flex-1 py-1 rounded-pill text-[11px] font-semibold transition-colors duration-hover ${
+              sourceTab === 'user' ? 'bg-ink text-paper' : 'text-ink-6 hover:text-ink'
+            }`}
+          >
+            Support
+          </button>
+          <button
+            onClick={() => {
+              setSourceTab('ai')
+              setMobilePane('list')
+              const aiRows = tickets.filter(r => r.source === 'ai')
+              setSelected(aiRows[0]?.id ?? null)
+            }}
+            className={`flex items-center justify-center gap-1 flex-1 py-1 rounded-pill text-[11px] font-semibold transition-colors duration-hover ${
+              sourceTab === 'ai' ? 'bg-ink text-paper' : 'text-ink-6 hover:text-ink'
+            }`}
+          >
+            <Sparkles size={10} />
+            AI chats
+          </button>
+        </div>
+
+        {/* Status filter — only shown for support tab */}
+        {sourceTab === 'user' && (
+        <div className="flex gap-1 px-3 py-2 border-b border-paper-3 shrink-0">
           {(['open', 'closed', 'all'] as StatusFilter[]).map(f => (
             <button
               key={f}
@@ -194,6 +232,8 @@ export function MessagesView() {
             </button>
           ))}
         </div>
+        )}
+        {sourceTab === 'ai' && <div className="border-b border-paper-3 shrink-0" />}
 
         <div className="flex-1 overflow-y-auto">
           {loading && (
@@ -204,7 +244,9 @@ export function MessagesView() {
 
           {!loading && filtered.length === 0 && (
             <div className="px-5 pt-12 text-center">
-              <p className="text-body-sm text-ink-6">No {statusFilter !== 'all' ? statusFilter : ''} tickets.</p>
+              <p className="text-body-sm text-ink-6">
+                {sourceTab === 'ai' ? 'No AI conversations yet.' : `No ${statusFilter !== 'all' ? statusFilter : ''} tickets.`}
+              </p>
             </div>
           )}
 
@@ -213,7 +255,7 @@ export function MessagesView() {
             return (
               <button
                 key={ticket.id}
-                onClick={() => setSelected(ticket.id)}
+                onClick={() => { setSelected(ticket.id); setMobilePane('thread') }}
                 className={`w-full text-left px-4 py-3 border-b border-paper-3 transition-colors duration-hover ${
                   isActive ? 'bg-ink' : 'hover:bg-paper-2'
                 }`}
@@ -239,13 +281,22 @@ export function MessagesView() {
                     </span>
                   </div>
                 </div>
-                {/* Row 2: topic pill + status */}
+                {/* Row 2: topic/AI pill + status */}
                 <div className="flex items-center gap-1.5 mb-1">
-                  <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-pill ${
-                    isActive ? 'bg-paper/15 text-paper' : topicStyle(ticket.topic)
-                  }`}>
-                    {ticket.topic}
-                  </span>
+                  {ticket.source === 'ai' ? (
+                    <span className={`flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-pill ${
+                      isActive ? 'bg-paper/15 text-paper' : 'bg-saffron/10 text-saffron-2'
+                    }`}>
+                      <Sparkles size={9} />
+                      AI chat
+                    </span>
+                  ) : (
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-pill ${
+                      isActive ? 'bg-paper/15 text-paper' : topicStyle(ticket.topic)
+                    }`}>
+                      {ticket.topic}
+                    </span>
+                  )}
                   {ticket.status === 'closed' && (
                     <span className={`text-[10px] ${isActive ? 'text-paper/50' : 'text-ink-6'}`}>· closed</span>
                   )}
@@ -261,43 +312,60 @@ export function MessagesView() {
       </div>
 
       {/* Right: thread */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`${mobilePane === 'list' ? 'hidden md:flex' : 'flex'} flex-1 flex-col overflow-hidden`}>
         {selectedTicket ? (
           <>
-            <div className="px-7 py-4 border-b border-paper-3 shrink-0 flex items-center justify-between">
+            <div className="px-4 md:px-7 py-3 md:py-4 border-b border-paper-3 shrink-0 flex items-center justify-between gap-3">
+              <button
+                onClick={() => setMobilePane('list')}
+                className="md:hidden flex items-center gap-1 text-ink-6 hover:text-ink transition-colors shrink-0"
+                aria-label="Back to list"
+              >
+                <ArrowLeft size={16} />
+              </button>
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
                   <h3 className="font-display text-[18px] font-[500] text-ink tracking-[-0.01em] font-optical">
                     {selectedTicket.restaurantName}
                   </h3>
-                  <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-pill ${topicStyle(selectedTicket.topic)}`}>
-                    {selectedTicket.topic}
-                  </span>
+                  {selectedTicket.source === 'ai' ? (
+                    <span className="flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-pill bg-saffron/10 text-saffron-2">
+                      <Sparkles size={10} />
+                      AI chat
+                    </span>
+                  ) : (
+                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-pill ${topicStyle(selectedTicket.topic)}`}>
+                      {selectedTicket.topic}
+                    </span>
+                  )}
                 </div>
                 {selectedTicket.suspended && (
                   <span className="text-[12px] text-ember">Suspended account</span>
                 )}
               </div>
-              <button
-                onClick={() => setTicketStatus(selectedTicket.id, selectedTicket.status === 'open' ? 'closed' : 'open')}
-                disabled={closing}
-                className={`px-3 py-1.5 rounded-2 text-body-sm font-semibold transition-colors duration-hover disabled:opacity-40 ${
-                  selectedTicket.status === 'open'
-                    ? 'border border-paper-4 text-ink-5 hover:border-ink-4 hover:text-ink'
-                    : 'bg-herb-wash text-herb-2 hover:bg-herb/20'
-                }`}
-              >
-                {selectedTicket.status === 'open' ? 'Close ticket' : 'Reopen ticket'}
-              </button>
+              {selectedTicket.source === 'user' && (
+                <button
+                  onClick={() => setTicketStatus(selectedTicket.id, selectedTicket.status === 'open' ? 'closed' : 'open')}
+                  disabled={closing}
+                  className={`px-3 py-1.5 rounded-2 text-body-sm font-semibold transition-colors duration-hover disabled:opacity-40 ${
+                    selectedTicket.status === 'open'
+                      ? 'border border-paper-4 text-ink-5 hover:border-ink-4 hover:text-ink'
+                      : 'bg-herb-wash text-herb-2 hover:bg-herb/20'
+                  }`}
+                >
+                  {selectedTicket.status === 'open' ? 'Close ticket' : 'Reopen ticket'}
+                </button>
+              )}
             </div>
 
-            <div className="flex-1 overflow-hidden px-7 py-5">
+            <div className="flex-1 overflow-hidden px-4 md:px-7 py-4 md:py-5">
               <TicketThread
                 key={selectedTicket.id}
                 ticketId={selectedTicket.id}
                 restaurantId={selectedTicket.restaurantId}
                 restaurantName={selectedTicket.restaurantName}
                 ticketStatus={selectedTicket.status}
+                isReadOnly={selectedTicket.source === 'ai'}
               />
             </div>
           </>

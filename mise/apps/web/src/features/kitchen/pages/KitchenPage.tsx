@@ -44,7 +44,7 @@ export default function KitchenPage() {
 
   const { orders, pulsingId, loading: ordersLoading, applyOrderStage, restoreKitchenOrder } =
     useKitchenOrders(restaurantId)
-  const { calls, acknowledgeCall } = useWaiterCalls(restaurantId)
+  const { calls, acknowledgeCall, acknowledgeAllForTable } = useWaiterCalls(restaurantId)
 
   const [accepting, setAccepting] = useState<boolean>(true)
   const acceptingRef = useRef(accepting)
@@ -157,6 +157,7 @@ export default function KitchenPage() {
           restaurantSlug={restaurant.slug}
           calls={calls}
           onAckCall={acknowledgeCall}
+          onAckCallsForTable={acknowledgeAllForTable}
         />
       )}
     </div>

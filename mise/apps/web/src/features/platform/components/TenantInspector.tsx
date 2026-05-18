@@ -101,10 +101,10 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-[540px] z-50 bg-paper overflow-y-auto shadow-2 transition-transform duration-standard ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-full w-full sm:w-[540px] z-50 bg-paper overflow-y-auto shadow-2 transition-transform duration-standard ${open ? 'translate-x-0' : 'translate-x-full'}`}
       >
         {tenant && (
-          <div className="p-7">
+          <div className="p-5 md:p-7">
             {/* Header */}
             <div className="flex items-start justify-between mb-4">
               <div>

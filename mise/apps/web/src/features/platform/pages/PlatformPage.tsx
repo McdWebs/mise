@@ -80,6 +80,7 @@ export default function PlatformPage() {
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<FleetTenant | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
+  const [signOutOpen, setSignOutOpen] = useState(false);
 
   const filtered = useMemo(() => {
     let list = tenants;
@@ -113,36 +114,36 @@ export default function PlatformPage() {
   return (
     <div className="min-h-dvh bg-paper">
       {/* Top nav */}
-      <header className="flex items-center gap-4 px-7 py-3.5 border-b border-paper-3 bg-paper">
-        <div className="flex items-center gap-2.5">
+      <header className="flex items-center gap-3 px-4 py-3 md:px-7 md:py-3.5 border-b border-paper-3 bg-paper sticky top-0 z-10">
+        <div className="flex items-center gap-2 shrink-0">
           <img
             src="/assets/logo-mark.svg"
             alt=""
-            width={28}
-            height={28}
+            width={26}
+            height={26}
             className="rounded-2"
             onError={(e) => {
               (e.target as HTMLImageElement).style.display = "none";
             }}
           />
-          <span className="font-display text-[18px] font-[500] text-ink tracking-[-0.01em] font-optical">
+          <span className="font-display text-[17px] font-[500] text-ink tracking-[-0.01em] font-optical">
             Mise
           </span>
         </div>
 
-        <div className="pl-3.5 border-l border-paper-3">
-          <span className="text-overline text-ink-6 uppercase tracking-widest">
+        <div className="pl-3 border-l border-paper-3 hidden sm:block shrink-0">
+          <span className="text-overline text-ink-6 uppercase tracking-widest text-[10px]">
             Platform admin
           </span>
         </div>
 
         {/* View tabs */}
-        <div className="flex items-center gap-1 ml-5 border border-paper-3 rounded-pill p-0.5">
+        <div className="flex items-center gap-0.5 ml-2 md:ml-5 border border-paper-3 rounded-pill p-0.5 overflow-x-auto shrink-0 max-w-full">
           {(["fleet", "analytics", "messages", "settings"] as PlatformView[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`relative px-3.5 py-1.5 rounded-pill text-body-sm font-medium capitalize transition-colors duration-hover ${
+              className={`relative px-2.5 md:px-3.5 py-1.5 rounded-pill text-[12px] md:text-body-sm font-medium capitalize transition-colors duration-hover whitespace-nowrap ${
                 view === v ? "bg-ink text-paper" : "text-ink-5 hover:text-ink"
               }`}
             >
@@ -156,9 +157,9 @@ export default function PlatformPage() {
           ))}
         </div>
 
-        <div className="ml-auto flex items-center">
+        <div className="ml-auto flex items-center shrink-0">
           <button
-            onClick={() => supabase.auth.signOut()}
+            onClick={() => setSignOutOpen(true)}
             className="text-ink-6 hover:text-ink transition-colors duration-hover"
             aria-label="Sign out"
           >
@@ -168,7 +169,7 @@ export default function PlatformPage() {
       </header>
 
       {/* Main */}
-      <main className="px-8 py-7 max-w-[1480px]">
+      <main className="px-4 py-4 md:px-8 md:py-7 max-w-[1480px]">
         {view === "settings" ? (
           user ? <PlatformSettingsPage user={user} /> : null
         ) : view === "messages" ? (
@@ -188,21 +189,19 @@ export default function PlatformPage() {
                   {withErrors} with errors · last sync {lastSync}
                 </div>
               </div>
-              <div className="flex items-center gap-2.5 shrink-0">
-                <div className="flex items-center gap-2 px-3.5 py-2 border-[1.5px] border-paper-4 rounded-pill min-w-[260px] w-full sm:w-auto sm:max-w-[320px]">
-                  <span className="text-ink-7 text-[16px] leading-none shrink-0">
-                    ⌕
-                  </span>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 px-3.5 py-2 border-[1.5px] border-paper-4 rounded-pill w-full sm:min-w-[240px] sm:max-w-[320px]">
+                  <span className="text-ink-7 text-[16px] leading-none shrink-0">⌕</span>
                   <input
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Find a tenant by name or slug…"
+                    placeholder="Find a tenant…"
                     className="flex-1 min-w-0 bg-transparent border-none outline-none text-body text-ink placeholder:text-ink-7"
                   />
                 </div>
                 <button
                   onClick={() => setCreateOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-pill bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover whitespace-nowrap shrink-0"
+                  className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-pill bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover whitespace-nowrap"
                 >
                   <Plus size={14} strokeWidth={2.5} />
                   New restaurant
@@ -211,12 +210,12 @@ export default function PlatformPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex items-center gap-2 mb-3.5">
+            <div className="flex items-center gap-2 mb-3.5 overflow-x-auto pb-1">
               {FILTERS.map((f) => (
                 <button
                   key={f.key}
                   onClick={() => setFilter(f.key)}
-                  className={`px-3 py-1.5 rounded-pill border-[1.5px] text-body-sm font-medium transition-colors duration-hover whitespace-nowrap ${filter === f.key ? "bg-ink border-ink text-paper" : "bg-paper border-paper-4 text-ink hover:border-ink-5"}`}
+                  className={`px-3 py-1.5 rounded-pill border-[1.5px] text-body-sm font-medium transition-colors duration-hover whitespace-nowrap shrink-0 ${filter === f.key ? "bg-ink border-ink text-paper" : "bg-paper border-paper-4 text-ink hover:border-ink-5"}`}
                 >
                   {f.label}
                 </button>
@@ -225,9 +224,9 @@ export default function PlatformPage() {
 
             {/* Fleet table */}
             <div className="bg-paper border border-paper-3 rounded-3 overflow-hidden">
-              {/* Table header */}
+              {/* Table header — desktop only */}
               <div
-                className="grid gap-3.5 px-4.5 py-3 bg-paper-2 text-overline text-ink-6 uppercase tracking-widest"
+                className="hidden md:grid gap-3.5 bg-paper-2 text-overline text-ink-6 uppercase tracking-widest"
                 style={{ gridTemplateColumns: GRID, padding: "10px 18px" }}
               >
                 <span />
@@ -250,53 +249,61 @@ export default function PlatformPage() {
                 </div>
               ) : (
                 filtered.map((tenant) => (
-                  <div
-                    key={tenant.id}
-                    className="grid gap-3.5 border-t border-paper-3 items-center cursor-pointer hover:bg-paper-2 transition-colors duration-hover"
-                    style={{ gridTemplateColumns: GRID, padding: "12px 18px" }}
-                    onClick={() => setSelected(tenant)}
-                  >
-                    <HealthDot health={tenant.health} />
-
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <div className="font-display text-[16px] font-[500] text-ink tracking-[-0.005em] leading-tight">
-                          {tenant.name}
+                  <div key={tenant.id}>
+                    {/* Desktop row */}
+                    <div
+                      className="hidden md:grid gap-3.5 border-t border-paper-3 items-center cursor-pointer hover:bg-paper-2 transition-colors duration-hover"
+                      style={{ gridTemplateColumns: GRID, padding: "12px 18px" }}
+                      onClick={() => setSelected(tenant)}
+                    >
+                      <HealthDot health={tenant.health} />
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-display text-[16px] font-[500] text-ink tracking-[-0.005em] leading-tight">
+                            {tenant.name}
+                          </div>
+                          {tenant.unreadMessages > 0 && (
+                            <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-ember text-paper text-[11px] font-semibold flex items-center justify-center tabular-nums shrink-0">
+                              {tenant.unreadMessages > 9 ? "9+" : tenant.unreadMessages}
+                            </span>
+                          )}
                         </div>
-                        {tenant.unreadMessages > 0 && (
-                          <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-ember text-paper text-[11px] font-semibold flex items-center justify-center tabular-nums shrink-0">
-                            {tenant.unreadMessages > 9
-                              ? "9+"
-                              : tenant.unreadMessages}
-                          </span>
-                        )}
+                        <div className="font-mono text-[11px] text-ink-6 mt-0.5">
+                          {window.location.host}/r/{tenant.slug}
+                        </div>
                       </div>
-                      <div className="font-mono text-[11px] text-ink-6 mt-0.5">
-                        {window.location.host}/r/{tenant.slug}
-                      </div>
+                      <StatePill state={tenant.state} />
+                      <span className="font-mono tabular-nums text-body-sm text-ink">{tenant.ordersToday}</span>
+                      <span className="font-mono tabular-nums text-body-sm text-ink">{fmtRevenue(tenant.revenueTodayCents, platformCurrency)}</span>
+                      <span className={`font-mono tabular-nums text-body-sm ${tenant.errors > 0 ? "text-ember" : "text-ink-6"}`}>{tenant.errors}</span>
+                      <span className="font-mono text-[12px] text-ink-6">{fmtLastSeen(tenant.lastSeenAt)}</span>
+                      <span className="text-ink-7 text-[16px]">›</span>
                     </div>
 
-                    <StatePill state={tenant.state} />
-
-                    <span className="font-mono tabular-nums text-body-sm text-ink">
-                      {tenant.ordersToday}
-                    </span>
-
-                    <span className="font-mono tabular-nums text-body-sm text-ink">
-                      {fmtRevenue(tenant.revenueTodayCents, platformCurrency)}
-                    </span>
-
-                    <span
-                      className={`font-mono tabular-nums text-body-sm ${tenant.errors > 0 ? "text-ember" : "text-ink-6"}`}
+                    {/* Mobile card */}
+                    <div
+                      className="md:hidden border-t border-paper-3 px-4 py-3.5 cursor-pointer hover:bg-paper-2 transition-colors duration-hover flex items-start gap-3"
+                      onClick={() => setSelected(tenant)}
                     >
-                      {tenant.errors}
-                    </span>
-
-                    <span className="font-mono text-[12px] text-ink-6">
-                      {fmtLastSeen(tenant.lastSeenAt)}
-                    </span>
-
-                    <span className="text-ink-7 text-[16px]">›</span>
+                      <div className="mt-1.5 shrink-0"><HealthDot health={tenant.health} /></div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                          <span className="font-display text-[15px] font-[500] text-ink truncate leading-tight">{tenant.name}</span>
+                          {tenant.unreadMessages > 0 && (
+                            <span className="shrink-0 min-w-[16px] h-[16px] px-0.5 rounded-full bg-ember text-paper text-[10px] font-semibold flex items-center justify-center tabular-nums">
+                              {tenant.unreadMessages > 9 ? "9+" : tenant.unreadMessages}
+                            </span>
+                          )}
+                          <StatePill state={tenant.state} />
+                        </div>
+                        <div className="font-mono text-[11px] text-ink-6 mb-1.5">/{tenant.slug}</div>
+                        <div className="font-mono text-[12px] text-ink-6 tabular-nums">
+                          {tenant.ordersToday} orders · {fmtRevenue(tenant.revenueTodayCents, platformCurrency)}
+                          {tenant.errors > 0 && <span className="text-ember ml-1.5">· {tenant.errors} err</span>}
+                        </div>
+                      </div>
+                      <span className="text-ink-7 text-[16px] mt-0.5 shrink-0">›</span>
+                    </div>
                   </div>
                 ))
               )}
@@ -310,6 +317,35 @@ export default function PlatformPage() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
       />
+
+      {/* Sign-out confirmation */}
+      {signOutOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-ink/40" onClick={() => setSignOutOpen(false)} />
+          <div className="relative bg-paper rounded-3 shadow-2 p-6 w-full max-w-[340px]">
+            <h2 className="font-display text-[20px] font-[500] text-ink tracking-[-0.01em] font-optical mb-1">
+              Sign out?
+            </h2>
+            <p className="text-body-sm text-ink-6 mb-5">
+              You'll need to sign back in to access the platform dashboard.
+            </p>
+            <div className="flex gap-2.5">
+              <button
+                onClick={() => setSignOutOpen(false)}
+                className="flex-1 px-4 py-2.5 rounded-2 border border-paper-4 text-body-sm font-semibold text-ink hover:bg-paper-2 transition-colors duration-hover"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => supabase.auth.signOut()}
+                className="flex-1 px-4 py-2.5 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover"
+              >
+                Sign out
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

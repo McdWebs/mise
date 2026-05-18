@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 
 export interface GuestTable {
@@ -27,8 +28,11 @@ async function fetchGuestTableByLabel(
 }
 
 export function useGuestTable(restaurantId: string | undefined, tableLabel: string | null) {
-  return useQuery<GuestTable | null>({
-    queryKey: ['guest-table', restaurantId, tableLabel],
+  const queryClient = useQueryClient()
+  const queryKey = ['guest-table', restaurantId, tableLabel]
+
+  const query = useQuery<GuestTable | null>({
+    queryKey,
     queryFn: async () => {
       if (!restaurantId || !tableLabel) return null
       const trimmed = tableLabel.trim()
@@ -48,4 +52,23 @@ export function useGuestTable(restaurantId: string | undefined, tableLabel: stri
     enabled: !!restaurantId,
     staleTime: 0,
   })
+
+  useEffect(() => {
+    if (!restaurantId) return
+    const ch = supabase
+      .channel(`guest-table-status-${restaurantId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'table_status', filter: `restaurant_id=eq.${restaurantId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['guest-table', restaurantId] })
+        }
+      )
+      .subscribe()
+    return () => {
+      void supabase.removeChannel(ch)
+    }
+  }, [restaurantId, queryClient])
+
+  return query
 }

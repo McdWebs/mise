@@ -11,6 +11,7 @@ interface TableFloorProps {
   restaurantSlug: string
   calls: WaiterCall[]
   onAckCall: (id: string) => Promise<void>
+  onAckCallsForTable?: (tableLabel: string) => Promise<void>
 }
 
 function generateLabels(prefix: string, from: number, to: number): string[] {
@@ -237,7 +238,7 @@ function AddTableCard({
   )
 }
 
-export function TableFloor({ restaurantId, restaurantSlug, calls, onAckCall }: TableFloorProps) {
+export function TableFloor({ restaurantId, restaurantSlug, calls, onAckCall, onAckCallsForTable }: TableFloorProps) {
   const { tables, loading, refetch } = useTables(restaurantId)
   const handleAckCall = useCallback(
     async (id: string) => {
@@ -342,6 +343,7 @@ export function TableFloor({ restaurantId, restaurantSlug, calls, onAckCall }: T
         restaurantSlug={restaurantSlug}
         calls={selectedCalls}
         onAckCall={handleAckCall}
+        onAckCallsForTable={onAckCallsForTable}
         onClose={() => setSelectedTableId(null)}
         onMutated={refetch}
       />

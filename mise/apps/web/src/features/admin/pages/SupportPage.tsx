@@ -32,6 +32,7 @@ interface SupportTicket {
   id: string
   topic: string
   status: 'open' | 'closed'
+  source?: 'user' | 'ai'
   created_at: string
 }
 
@@ -39,7 +40,7 @@ interface SupportMessage {
   id: string
   ticket_id: string | null
   restaurant_id: string
-  sender_role: 'owner' | 'platform'
+  sender_role: 'owner' | 'platform' | 'ai'
   body: string
   read_at: string | null
   created_at: string
@@ -49,6 +50,7 @@ interface OwnerTicket {
   id: string
   topic: string
   status: 'open' | 'closed'
+  source: 'user' | 'ai'
   createdAt: string
   lastBody: string
   lastAt: string
@@ -107,6 +109,7 @@ export function SupportPage({ restaurant }: SupportPageProps) {
   const [aiMessages, setAiMessages] = useState<AiMessage[]>([])
   const [aiInput, setAiInput] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
+  const [aiTicketId, setAiTicketId] = useState<string | null>(null)
   const aiBottomRef = useRef<HTMLDivElement>(null)
   const aiTextareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -114,7 +117,7 @@ export function SupportPage({ restaurant }: SupportPageProps) {
     const [{ data: ticketData }, { data: msgData }] = await Promise.all([
       supabase
         .from('support_tickets')
-        .select('id, topic, status, created_at')
+        .select('*')
         .eq('restaurant_id', restaurant.id)
         .order('created_at', { ascending: false }),
       supabase
@@ -140,6 +143,7 @@ export function SupportPage({ restaurant }: SupportPageProps) {
         id: t.id,
         topic: t.topic,
         status: t.status,
+        source: t.source ?? 'user',
         createdAt: t.created_at,
         lastBody: last?.body ?? '',
         lastAt: last?.created_at ?? t.created_at,
@@ -237,15 +241,44 @@ export function SupportPage({ restaurant }: SupportPageProps) {
     setAiLoading(true)
     setTimeout(() => aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
 
+    // Create a ticket on first message of the session
+    let ticketId = aiTicketId
+    if (!ticketId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: ticket } = await (supabase as any)
+        .from('support_tickets')
+        .insert({ restaurant_id: restaurant.id, topic: 'AI chat', source: 'ai' })
+        .select('id')
+        .single()
+      if (ticket) {
+        ticketId = (ticket as { id: string }).id
+        setAiTicketId(ticketId)
+      }
+    }
+
+    if (ticketId) {
+      await supabase
+        .from('support_messages')
+        .insert({ restaurant_id: restaurant.id, ticket_id: ticketId, sender_role: 'owner', body: text, read_at: new Date().toISOString() })
+    }
+
     const { data, error } = await supabase.functions.invoke('support-ai', {
       body: { messages: next },
     })
 
-    if (error || !data?.text) {
-      setAiMessages(prev => [...prev, { role: 'assistant', content: 'Sorry, I had trouble responding. Please try again or open a support ticket.' }])
-    } else {
-      setAiMessages(prev => [...prev, { role: 'assistant', content: data.text }])
+    const responseText = (error || !data?.text)
+      ? 'Sorry, I had trouble responding. Please try again or open a support ticket.'
+      : (data.text as string)
+
+    setAiMessages(prev => [...prev, { role: 'assistant', content: responseText }])
+
+    if (ticketId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from('support_messages')
+        .insert({ restaurant_id: restaurant.id, ticket_id: ticketId, sender_role: 'ai', body: responseText })
     }
+
     setAiLoading(false)
     setTimeout(() => aiBottomRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
     aiTextareaRef.current?.focus()
@@ -330,11 +363,11 @@ export function SupportPage({ restaurant }: SupportPageProps) {
             <div className="flex items-center gap-2 shrink-0 mt-1">
               <button
                 type="button"
-                onClick={() => { setAiMessages([]); setView('ai') }}
+                onClick={() => { setAiMessages([]); setAiTicketId(null); setView('ai') }}
                 className="flex items-center gap-1.5 px-3.5 py-2 rounded-pill border border-paper-4 text-ink text-body-sm font-semibold hover:bg-paper-2 transition-colors duration-hover"
               >
                 <Sparkles size={14} className="text-saffron" />
-                <span className="hidden sm:inline">Ask AI</span>
+                <span className="hidden sm:inline">Ask Mise AI</span>
               </button>
               <button
                 type="button"
@@ -370,11 +403,11 @@ export function SupportPage({ restaurant }: SupportPageProps) {
               </p>
               <div className="flex items-center gap-2.5 mt-5">
                 <button
-                  onClick={() => { setAiMessages([]); setView('ai') }}
+                  onClick={() => { setAiMessages([]); setAiTicketId(null); setView('ai') }}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-pill border border-paper-4 text-ink text-body-sm font-semibold hover:bg-paper-2 transition-colors"
                 >
                   <Sparkles size={13} className="text-saffron" />
-                  Ask AI
+                  Ask Mise AI
                 </button>
                 <button
                   onClick={() => setView('new')}
@@ -392,10 +425,17 @@ export function SupportPage({ restaurant }: SupportPageProps) {
                   onClick={() => openThread(ticket.id)}
                   className="w-full text-left px-5 py-4 border-b border-paper-3 hover:bg-paper-2 transition-colors duration-hover flex items-start gap-4"
                 >
-                  {/* Topic pill */}
-                  <span className={`shrink-0 mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-pill ${TOPIC_STYLES[ticket.topic as Topic] ?? 'bg-paper-3 text-ink-5'}`}>
-                    {ticket.topic}
-                  </span>
+                  {/* Topic / AI pill */}
+                  {ticket.source === 'ai' ? (
+                    <span className="shrink-0 mt-0.5 flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-pill bg-saffron/10 text-saffron-2">
+                      <Sparkles size={10} />
+                      AI chat
+                    </span>
+                  ) : (
+                    <span className={`shrink-0 mt-0.5 text-[11px] font-semibold px-2 py-0.5 rounded-pill ${TOPIC_STYLES[ticket.topic as Topic] ?? 'bg-paper-3 text-ink-5'}`}>
+                      {ticket.topic}
+                    </span>
+                  )}
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-0.5">
@@ -513,7 +553,7 @@ export function SupportPage({ restaurant }: SupportPageProps) {
           <div className="flex items-center gap-2">
             <Sparkles size={18} className="text-saffron shrink-0" />
             <h1 className="font-display text-[24px] font-[500] text-ink tracking-[-0.01em] font-optical leading-tight">
-              Ask AI
+              Ask Mise AI
             </h1>
           </div>
           <p className="text-body-sm text-ink-6 mt-0.5 ml-[26px]">
@@ -676,6 +716,7 @@ export function SupportPage({ restaurant }: SupportPageProps) {
 
           {!loadingThread && messages.map((msg, i) => {
             const isOwner = msg.sender_role === 'owner'
+            const isAi = msg.sender_role === 'ai'
             const showDate = i === 0 || !sameDay(messages[i - 1].created_at, msg.created_at)
             return (
               <div key={msg.id}>
@@ -688,17 +729,25 @@ export function SupportPage({ restaurant }: SupportPageProps) {
                 )}
                 <div className={`flex ${isOwner ? 'justify-end' : 'justify-start'} mb-2`}>
                   <div className={`max-w-[75%] ${isOwner ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
-                    {!isOwner && (
+                    {isAi && (
+                      <div className="flex items-center gap-1 px-1 mb-0.5">
+                        <Sparkles size={11} className="text-saffron" />
+                        <span className="text-[11px] text-ink-6">Mise AI</span>
+                      </div>
+                    )}
+                    {!isOwner && !isAi && (
                       <span className="text-[11px] text-ink-6 px-1">Mise support</span>
                     )}
                     <div
-                      className={`px-3.5 py-2.5 rounded-2 text-[14px] leading-relaxed whitespace-pre-wrap break-words ${
+                      className={`px-3.5 py-2.5 rounded-2 text-[14px] leading-relaxed break-words ${
                         isOwner
-                          ? 'bg-ink text-paper rounded-br-[4px]'
-                          : 'bg-paper-2 text-ink rounded-bl-[4px]'
+                          ? 'bg-ink text-paper rounded-br-[4px] whitespace-pre-wrap'
+                          : isAi
+                          ? 'bg-saffron/10 text-ink rounded-bl-[4px]'
+                          : 'bg-paper-2 text-ink rounded-bl-[4px] whitespace-pre-wrap'
                       }`}
                     >
-                      {msg.body}
+                      {isAi ? <AssistantMessageContent text={msg.body} /> : msg.body}
                     </div>
                     <span className="text-[11px] text-ink-7 px-1">{fmtTime(msg.created_at)}</span>
                   </div>
@@ -710,7 +759,7 @@ export function SupportPage({ restaurant }: SupportPageProps) {
         </div>
 
         {/* Input or closed state */}
-        {selectedTicket?.status === 'open' ? (
+        {selectedTicket?.source === 'ai' ? null : selectedTicket?.status === 'open' ? (
           <div className="shrink-0 border-t border-paper-3 px-4 py-3 flex items-end gap-3">
             <textarea
               ref={textareaRef}

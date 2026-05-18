@@ -32,7 +32,7 @@ const NAV_INSIGHTS: { id: AdminPage; label: string }[] = [
 
 const GUEST_MENU_DEFAULT_TABLE_PARAM = '1'
 
-function SuspendedBanner() {
+function SuspendedBanner({ supportTo }: { supportTo: string }) {
   return (
     <div className="mb-6 rounded-3 border border-ember/40 bg-ember-wash px-5 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -47,8 +47,7 @@ function SuspendedBanner() {
           </div>
         </div>
         <NavLink
-          to="support"
-          relative="path"
+          to={supportTo}
           className="shrink-0 px-4 py-2.5 rounded-2 bg-ember text-paper text-body-sm font-semibold hover:opacity-90 transition-opacity whitespace-nowrap text-center no-underline"
         >
           Contact support
@@ -165,11 +164,15 @@ export default function AdminShell() {
     )
   }
 
+  const platformSuffix = isPlatformAdmin ? '?platform=1' : ''
+  function adminPath(page: AdminPage | 'support') {
+    return `/admin/${slug}/${page}${platformSuffix}`
+  }
+
   function NavItem({ id, label }: { id: AdminPage; label: string }) {
     return (
       <NavLink
-        to={id}
-        relative="path"
+        to={adminPath(id)}
         className={({ isActive }) =>
           `flex items-center gap-2.5 px-2.5 py-2 rounded-2 text-body font-medium w-full text-left transition-colors duration-hover ${
             isActive ? 'bg-ink text-paper' : 'text-ink-5 hover:bg-paper-2 hover:text-ink'
@@ -217,8 +220,7 @@ export default function AdminShell() {
         </div>
         <div className="px-2 space-y-0.5">
           <NavLink
-            to="support"
-            relative="path"
+            to={adminPath('support')}
             className={({ isActive }) =>
               `flex items-center justify-between px-2.5 py-2 rounded-2 text-body font-medium w-full text-left transition-colors duration-hover ${
                 isActive ? 'bg-ink text-paper' : 'text-ink-5 hover:bg-paper-2 hover:text-ink'
@@ -356,13 +358,13 @@ export default function AdminShell() {
         )}
         {!isPlatformAdmin && (
           restaurant.suspended
-            ? <SuspendedBanner />
+            ? <SuspendedBanner supportTo={adminPath('support')} />
             : !restaurant.accepting_orders
             ? <PausedBanner restaurant={restaurant} />
             : null
         )}
         <Routes>
-          <Route index element={<Navigate to="overview" replace />} />
+          <Route index element={<Navigate to={adminPath('overview')} replace />} />
           <Route path="overview"  element={<OverviewPage  restaurant={restaurant} />} />
           <Route path="menu"      element={<MenuPage      restaurant={restaurant} />} />
           <Route path="plans"     element={<PlansPage     restaurant={restaurant} />} />
@@ -371,7 +373,7 @@ export default function AdminShell() {
           <Route path="tables"    element={<TablesPage    restaurant={restaurant} />} />
           <Route path="assistant" element={<AssistantPage restaurant={restaurant} />} />
           <Route path="support"   element={<SupportPage   restaurant={restaurant} />} />
-          <Route path="*"         element={<Navigate to="overview" replace />} />
+          <Route path="*"         element={<Navigate to={adminPath('overview')} replace />} />
         </Routes>
       </main>
 

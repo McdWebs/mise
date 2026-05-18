@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { Send } from 'lucide-react'
+import { Send, Sparkles } from 'lucide-react'
 import { supabasePlatform as supabase } from '@/lib/supabasePlatform'
 
 interface SupportMessage {
   id: string
   ticket_id: string | null
   restaurant_id: string
-  sender_role: 'owner' | 'platform'
+  sender_role: 'owner' | 'platform' | 'ai'
   body: string
   read_at: string | null
   created_at: string
@@ -17,6 +17,7 @@ interface TicketThreadProps {
   restaurantId: string
   restaurantName: string
   ticketStatus: 'open' | 'closed'
+  isReadOnly?: boolean
 }
 
 function fmtTime(iso: string) {
@@ -31,7 +32,7 @@ function sameDay(a: string, b: string) {
   return new Date(a).toDateString() === new Date(b).toDateString()
 }
 
-export function TicketThread({ ticketId, restaurantId, restaurantName, ticketStatus }: TicketThreadProps) {
+export function TicketThread({ ticketId, restaurantId, restaurantName, ticketStatus, isReadOnly }: TicketThreadProps) {
   const [messages, setMessages] = useState<SupportMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [input, setInput] = useState('')
@@ -130,7 +131,8 @@ export function TicketThread({ ticketId, restaurantId, restaurantName, ticketSta
         )}
 
         {!loading && messages.map((msg, i) => {
-          const isPlatform = msg.sender_role === 'platform'
+          const isRight = msg.sender_role === 'platform' || msg.sender_role === 'ai'
+          const isAi = msg.sender_role === 'ai'
           const showDate = i === 0 || !sameDay(messages[i - 1].created_at, msg.created_at)
           return (
             <div key={msg.id}>
@@ -141,14 +143,22 @@ export function TicketThread({ ticketId, restaurantId, restaurantName, ticketSta
                   </span>
                 </div>
               )}
-              <div className={`flex ${isPlatform ? 'justify-end' : 'justify-start'} mb-1.5`}>
-                <div className={`max-w-[80%] flex flex-col gap-0.5 ${isPlatform ? 'items-end' : 'items-start'}`}>
-                  {!isPlatform && (
+              <div className={`flex ${isRight ? 'justify-end' : 'justify-start'} mb-1.5`}>
+                <div className={`max-w-[80%] flex flex-col gap-0.5 ${isRight ? 'items-end' : 'items-start'}`}>
+                  {!isRight && (
                     <span className="text-[10px] text-ink-6 px-1">{restaurantName}</span>
+                  )}
+                  {isAi && (
+                    <div className="flex items-center gap-1 px-1 mb-0.5">
+                      <Sparkles size={10} className="text-saffron" />
+                      <span className="text-[10px] text-ink-6">Mise AI</span>
+                    </div>
                   )}
                   <div
                     className={`px-3 py-2 rounded-2 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
-                      isPlatform
+                      isAi
+                        ? 'bg-saffron/10 text-ink rounded-br-[3px]'
+                        : isRight
                         ? 'bg-ink text-paper rounded-br-[3px]'
                         : 'bg-paper-2 text-ink rounded-bl-[3px]'
                     }`}
@@ -164,7 +174,7 @@ export function TicketThread({ ticketId, restaurantId, restaurantName, ticketSta
         <div ref={bottomRef} />
       </div>
 
-      {ticketStatus === 'open' ? (
+      {isReadOnly ? null : ticketStatus === 'open' ? (
         <div className="shrink-0 border-t border-paper-3 pt-3 flex items-end gap-2 mt-2">
           <textarea
             value={input}

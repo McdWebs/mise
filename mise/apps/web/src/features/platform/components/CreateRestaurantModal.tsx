@@ -179,13 +179,13 @@ export function CreateRestaurantModal({ open, onClose }: Props) {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-[480px] z-50 bg-paper overflow-y-auto shadow-2 transition-transform duration-standard ${open ? 'translate-x-0' : 'translate-x-full'}`}
+        className={`fixed top-0 right-0 h-full w-full sm:w-[480px] z-50 bg-paper overflow-y-auto shadow-2 transition-transform duration-standard ${open ? 'translate-x-0' : 'translate-x-full'}`}
       >
-        <div className="p-7">
+        <div className="p-5 md:p-7 pb-8">
           {/* Header */}
-          <div className="flex items-start justify-between mb-6">
-            <div>
-              <h2 className="font-display text-[26px] font-[500] text-ink tracking-[-0.01em] leading-tight font-optical">
+          <div className="flex items-start justify-between gap-3 mb-5 md:mb-6">
+            <div className="min-w-0 flex-1">
+              <h2 className="font-display text-[22px] sm:text-[26px] font-[500] text-ink tracking-[-0.01em] leading-tight font-optical">
                 {success ? 'Restaurant created' : 'New restaurant'}
               </h2>
               <p className="text-body-sm text-ink-6 mt-1">
@@ -194,7 +194,7 @@ export function CreateRestaurantModal({ open, onClose }: Props) {
             </div>
             <button
               onClick={onClose}
-              className="text-ink-6 hover:text-ink transition-colors duration-hover mt-1"
+              className="shrink-0 text-ink-6 hover:text-ink transition-colors duration-hover mt-1"
               aria-label="Close"
             >
               <X size={20} />
@@ -242,7 +242,7 @@ export function CreateRestaurantModal({ open, onClose }: Props) {
 
               <button
                 onClick={onClose}
-                className="px-5 py-2.5 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover"
               >
                 Done
               </button>
@@ -281,8 +281,8 @@ export function CreateRestaurantModal({ open, onClose }: Props) {
                 </div>
               </label>
 
-              <div className="flex gap-3">
-                <label className="flex flex-col gap-1.5 flex-1">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <label className="flex flex-col gap-1.5 flex-1 min-w-0">
                   <span className="text-body-sm font-medium text-ink-5">Tagline</span>
                   <input
                     value={tagline}
@@ -292,7 +292,7 @@ export function CreateRestaurantModal({ open, onClose }: Props) {
                   />
                 </label>
 
-                <label className="flex flex-col gap-1.5 w-[110px] shrink-0">
+                <label className="flex flex-col gap-1.5 w-full sm:w-[110px] shrink-0">
                   <span className="text-body-sm font-medium text-ink-5">Currency</span>
                   <select
                     value={currency}
@@ -364,18 +364,18 @@ export function CreateRestaurantModal({ open, onClose }: Props) {
               )}
 
               {/* Actions */}
-              <div className="flex gap-2.5 pt-1">
+              <div className="flex flex-col-reverse sm:flex-row gap-2.5 pt-1">
                 <button
                   type="submit"
                   disabled={!canSubmit}
-                  className="px-5 py-2.5 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   {saving ? 'Creating…' : 'Create restaurant'}
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-5 py-2.5 rounded-2 border-[1.5px] border-paper-4 text-ink text-body-sm font-semibold hover:bg-paper-2 transition-colors duration-hover"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-2 border-[1.5px] border-paper-4 text-ink text-body-sm font-semibold hover:bg-paper-2 transition-colors duration-hover"
                 >
                   Cancel
                 </button>
