@@ -5,13 +5,14 @@ import { TableChip } from './TableChip'
 interface VenueHeaderProps {
   restaurant: Restaurant
   tableLabel: string
+  seatNumber?: number | null
   /** Opens table orders sheet from the menu. */
   onMyOrders?: () => void
   orderCount?: number
   estimatedMinutes?: number
 }
 
-export function VenueHeader({ restaurant, tableLabel, onMyOrders, orderCount = 0, estimatedMinutes }: VenueHeaderProps) {
+export function VenueHeader({ restaurant, tableLabel, seatNumber, onMyOrders, orderCount = 0, estimatedMinutes }: VenueHeaderProps) {
   return (
     <div className="px-5 pt-5 pb-4">
       <div className="flex items-start justify-between gap-3">
@@ -50,6 +51,11 @@ export function VenueHeader({ restaurant, tableLabel, onMyOrders, orderCount = 0
             </button>
           )}
           <TableChip label={tableLabel} />
+          {seatNumber != null && (
+            <span className="flex items-center h-7 px-2.5 rounded-full bg-saffron/10 border border-saffron/25 font-mono text-[11px] font-semibold text-saffron-3 tracking-wide whitespace-nowrap">
+              Seat {seatNumber}
+            </span>
+          )}
         </div>
       </div>
     </div>

@@ -154,23 +154,27 @@ export function MenuPage({ restaurant }: MenuPageProps) {
             Edit categories, items, prices, and availability.
           </div>
         </div>
-        <div className="flex gap-2 shrink-0 flex-wrap">
+        <div className="flex gap-2 shrink-0">
           <button
+            type="button"
             onClick={() => setPreviewOpen(true)}
-            className="flex-1 sm:flex-none inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2 border border-paper-4 bg-paper text-ink text-body font-semibold hover:bg-paper-2 transition-colors duration-hover"
+            className="inline-flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2.5 rounded-2 border border-paper-4 bg-paper text-ink text-body font-semibold whitespace-nowrap hover:bg-paper-2 transition-colors duration-hover"
           >
             <Smartphone size={15} className="text-ink-5 shrink-0" />
             Preview
           </button>
           <button
+            type="button"
             onClick={() => setImportOpen(true)}
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-2 border border-paper-4 bg-paper text-ink text-body font-semibold hover:bg-paper-2 transition-colors duration-hover"
+            className="inline-flex items-center justify-center px-3 sm:px-4 py-2.5 rounded-2 border border-paper-4 bg-paper text-ink text-body font-semibold whitespace-nowrap hover:bg-paper-2 transition-colors duration-hover"
           >
-            Import from file
+            <span className="sm:hidden">Import</span>
+            <span className="hidden sm:inline">Import from file</span>
           </button>
           <button
+            type="button"
             onClick={() => setEditingItem(null)}
-            className="flex-1 sm:flex-none px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold hover:bg-saffron-2 transition-colors duration-hover active:scale-[0.98] active:duration-press"
+            className="inline-flex items-center justify-center min-w-[42px] px-3 sm:px-4 py-2.5 rounded-2 bg-saffron text-paper text-body font-semibold whitespace-nowrap hover:bg-saffron-2 transition-colors duration-hover active:scale-[0.98] active:duration-press"
           >
             + New item
           </button>

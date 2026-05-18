@@ -1,9 +1,11 @@
-import { useParams, useSearchParams } from 'react-router-dom'
+import { useEffect, useRef } from 'react'
+import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useOrder } from '../hooks/useOrder'
 import { useRestaurant } from '../hooks/useRestaurant'
 import { useTableOrders } from '../hooks/useTableOrders'
+import { useGuestTable } from '../hooks/useGuestTable'
 import { OrderStatus } from '../components/OrderStatus'
 import type { OrderItem } from '@mise/types'
 
@@ -17,10 +19,25 @@ export default function OrderStatusPage() {
   const { slug, orderId } = useParams<{ slug: string; orderId: string }>()
   const [searchParams] = useSearchParams()
   const tableLabel = searchParams.get('table') ?? 'T 1'
+  const navigate = useNavigate()
 
   const { order, isLoading: loadingOrder } = useOrder(orderId)
   const { data: restaurant } = useRestaurant(slug ?? '')
-  const tableOrders = useTableOrders(restaurant?.id, tableLabel)
+  const { data: guestTable } = useGuestTable(restaurant?.id, tableLabel)
+  const tableOrders = useTableOrders(restaurant?.id, order?.table_label ?? tableLabel, guestTable?.cleared_at)
+
+  // When staff clear the table, cleared_at changes — send the guest back to the cover screen
+  const initialClearedAt = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    if (!guestTable) return
+    if (initialClearedAt.current === undefined) {
+      initialClearedAt.current = guestTable.cleared_at
+      return
+    }
+    if (guestTable.cleared_at !== initialClearedAt.current) {
+      navigate(`/r/${slug}?table=${encodeURIComponent(tableLabel)}`)
+    }
+  }, [guestTable?.cleared_at]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch order items with item names joined
   const { data: items = [] } = useQuery<OrderItemWithName[]>({

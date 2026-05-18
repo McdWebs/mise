@@ -47,11 +47,12 @@ export function useTableOrders(restaurantId: string | undefined, tableLabel: str
     queryFn: async () => {
       // Use cleared_at if provided (new guest after table turnover), otherwise start of today
       const lowerBound = since ?? startOfToday()
+      // Match both the base label ("T 1") and any seat-specific variants ("T 1 · Seat N")
       const { data, error } = await supabase
         .from('orders')
         .select('id, stage, subtotal_cents, created_at, order_items(id, quantity, unit_price_cents, modifiers, menu_items(name), restaurant_plans(title))')
         .eq('restaurant_id', restaurantId!)
-        .eq('table_label', tableLabel!)
+        .or(`table_label.eq.${tableLabel!},table_label.like.${tableLabel!} · Seat %`)
         .gte('created_at', lowerBound)
         .neq('stage', 'cancelled')
         .order('created_at', { ascending: false })

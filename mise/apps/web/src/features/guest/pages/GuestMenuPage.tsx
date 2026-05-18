@@ -28,25 +28,27 @@ import type { MenuItem } from '@mise/types'
 
 const BG = { backgroundImage: 'url(/assets/pattern-tablecloth.svg)', backgroundRepeat: 'repeat' }
 
-function guestCoverStorageKey(restaurantId: string, tableId: string, clearedAt: string | null) {
-  // Include clearedAt so every table turnover gets a fresh cover gate
-  return `mise:guest-cover-dismissed:${restaurantId}:${tableId}:${clearedAt ?? 'initial'}`
+function coverKey(restaurantId: string, tableId: string, clearedAt: string | null) {
+  return `mise:guest-cover:${restaurantId}:${tableId}:${clearedAt ?? 'initial'}`
 }
 
-function isGuestCoverDismissed(restaurantId: string, tableId: string, clearedAt: string | null): boolean {
-  if (typeof window === 'undefined') return false
+function readCoverChoice(restaurantId: string, tableId: string, clearedAt: string | null): { dismissed: boolean; seat: number | null } {
+  if (typeof window === 'undefined') return { dismissed: false, seat: null }
   try {
-    return window.sessionStorage.getItem(guestCoverStorageKey(restaurantId, tableId, clearedAt)) === '1'
+    const raw = window.sessionStorage.getItem(coverKey(restaurantId, tableId, clearedAt))
+    if (!raw) return { dismissed: false, seat: null }
+    const parsed = JSON.parse(raw) as { seat: number | null }
+    return { dismissed: true, seat: parsed.seat }
   } catch {
-    return false
+    return { dismissed: false, seat: null }
   }
 }
 
-function persistGuestCoverDismissed(restaurantId: string, tableId: string, clearedAt: string | null) {
+function persistCoverChoice(restaurantId: string, tableId: string, clearedAt: string | null, seat: number | null) {
   try {
-    window.sessionStorage.setItem(guestCoverStorageKey(restaurantId, tableId, clearedAt), '1')
+    window.sessionStorage.setItem(coverKey(restaurantId, tableId, clearedAt), JSON.stringify({ seat }))
   } catch {
-    // private mode / quota — guest can still continue this navigation
+    // private mode / quota
   }
 }
 
@@ -60,6 +62,8 @@ export default function GuestMenuPage() {
 
   /** True after "Start ordering" this mount; sessionStorage handles remounts (e.g. Order more). */
   const [enteredMenuThisMount, setEnteredMenuThisMount] = useState(false)
+  // null = together mode, number = per-seat mode
+  const [seatNumber, setSeatNumber] = useState<number | null>(null)
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
   const [openItem, setOpenItem] = useState<MenuItem | null>(null)
   const [openPlan, setOpenPlan] = useState<RestaurantPlan | null>(null)
@@ -78,16 +82,15 @@ export default function GuestMenuPage() {
   const { data: guestTable, isLoading: loadingTable } = useGuestTable(restaurant?.id, tableParam)
   const { data: categories = [], isLoading: loadingMenu } = useMenu(restaurant?.id)
   const { data: plans = [] } = usePlans(restaurant?.id)
-  const ordersTableLabel = guestTable?.label ?? tableParam
-  // Only show orders placed since the last table clear (treats each turnover as a fresh session)
-  const { data: tableOrders = [] } = useTableOrders(restaurant?.id, ordersTableLabel, guestTable?.cleared_at)
+  const restaurantId = restaurant?.id ?? ''
+  const tableLabel = guestTable?.label ?? tableParam ?? ''
+  const effectiveTableLabel = seatNumber != null ? `${tableLabel} · Seat ${seatNumber}` : tableLabel
+  // In seat mode, effectiveTableLabel scopes orders to the current seat only
+  const { data: tableOrders = [] } = useTableOrders(restaurant?.id, effectiveTableLabel || null, guestTable?.cleared_at)
   const { data: estimatedMinutes } = useEstimatedWait(restaurant?.id, restaurant?.base_prep_minutes ?? 12)
 
   const queryClient = useQueryClient()
   const { addLine, getLines, getTotalCents, getTotalItems, clearCart } = useCartStore()
-  const restaurantId = restaurant?.id ?? ''
-  // After validation, tableLabel is always the string from the confirmed table record
-  const tableLabel = guestTable?.label ?? tableParam ?? ''
   const lines = getLines(restaurantId)
   const totalCents = getTotalCents(restaurantId)
   const totalItems = getTotalItems(restaurantId)
@@ -137,7 +140,7 @@ export default function GuestMenuPage() {
     setSubmitting(true)
     setSubmitError(null)
     try {
-      const { orderId } = await submitOrder({ restaurantId, tableLabel, lines, basePrepMinutes: restaurant?.base_prep_minutes ?? 12 })
+      const { orderId } = await submitOrder({ restaurantId, tableLabel: effectiveTableLabel, lines, basePrepMinutes: restaurant?.base_prep_minutes ?? 12 })
       clearCart(restaurantId)
       setCartOpen(false)
       navigate(`/r/${slug}/order/${orderId}?table=${encodeURIComponent(tableLabel)}`)
@@ -179,7 +182,7 @@ export default function GuestMenuPage() {
     void (async () => {
       const { error } = await supabase
         .from('waiter_calls')
-        .insert({ restaurant_id: restaurantId, table_label: tableLabel })
+        .insert({ restaurant_id: restaurantId, table_label: effectiveTableLabel })
       if (!error) notifyKitchenFloorNudge(restaurantId)
     })()
   }
@@ -245,9 +248,16 @@ export default function GuestMenuPage() {
 
   // ── Cover screen (once per browser session per table; clears when tab closes) ──
 
-  const skipCover =
-    enteredMenuThisMount ||
-    isGuestCoverDismissed(restaurant.id, guestTable.id, guestTable.cleared_at)
+  const storedChoice = guestTable
+    ? readCoverChoice(restaurant.id, guestTable.id, guestTable.cleared_at)
+    : { dismissed: false, seat: null }
+
+  const skipCover = enteredMenuThisMount || storedChoice.dismissed
+
+  // Sync stored seat into state on first render after cover was already dismissed
+  if (storedChoice.dismissed && storedChoice.seat !== seatNumber && !enteredMenuThisMount) {
+    setSeatNumber(storedChoice.seat)
+  }
 
   if (!skipCover) {
     return (
@@ -256,8 +266,10 @@ export default function GuestMenuPage() {
           <CoverScreen
             restaurant={restaurant}
             tableLabel={tableLabel}
-            onEnter={() => {
-              persistGuestCoverDismissed(restaurant.id, guestTable.id, guestTable.cleared_at)
+            tableSeats={guestTable.seats}
+            onEnter={(seat) => {
+              persistCoverChoice(restaurant.id, guestTable.id, guestTable.cleared_at, seat)
+              setSeatNumber(seat)
               setEnteredMenuThisMount(true)
               void supabase.rpc('mark_table_occupied', {
                 p_table_id: guestTable.id,
@@ -296,6 +308,7 @@ export default function GuestMenuPage() {
         <VenueHeader
           restaurant={restaurant}
           tableLabel={tableLabel}
+          seatNumber={seatNumber}
           onMyOrders={() => setOrdersSheetOpen(true)}
           orderCount={tableOrders.length}
           estimatedMinutes={estimatedMinutes}
@@ -372,7 +385,7 @@ export default function GuestMenuPage() {
 
       {showWaiterToast && (
         <div className="fixed bottom-[160px] left-1/2 -translate-x-1/2 z-50 bg-ink text-paper text-body-sm px-4 py-3 rounded-2 shadow-2 whitespace-nowrap animate-fade-in">
-          Waiter on the way to {tableLabel}
+          Waiter on the way to {effectiveTableLabel}
         </div>
       )}
 
@@ -404,7 +417,7 @@ export default function GuestMenuPage() {
           currency={restaurant.currency}
           lines={lines}
           restaurantName={restaurant.name}
-          tableLabel={tableLabel}
+          tableLabel={effectiveTableLabel}
           onClose={() => { setCartOpen(false); setSubmitError(null) }}
           onSubmit={handleSubmit}
           submitting={submitting}

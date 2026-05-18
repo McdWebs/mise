@@ -206,7 +206,7 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
                 )}
               </div>
               <span className="font-mono text-[14px] font-semibold text-ink tabular-nums">
-                {formatPriceExact(item.unit_price_cents * item.quantity)}
+                {formatPriceExact(item.unit_price_cents * item.quantity, currency)}
               </span>
             </div>
           ))}
