@@ -28,6 +28,7 @@ export function OrderTicket({ order, pulsing, tick: _tick, onClick, onDragStart 
   const elapsed = elapsedSeconds(order.updated_at)
   const tc = timerClass(stage, elapsed)
   const dragging = Boolean(onDragStart)
+  const railColor = order.urgent ? '#DC2626' : (RAIL_COLOR[stage] ?? '#6A5E51')
 
   return (
     <button
@@ -35,8 +36,8 @@ export function OrderTicket({ order, pulsing, tick: _tick, onClick, onDragStart 
       draggable={dragging}
       onDragStart={onDragStart}
       onClick={onClick}
-      className={`relative w-full text-left bg-paper overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-saffron ${dragging ? 'cursor-grab active:cursor-grabbing' : ''}`}
-      style={{ borderLeft: `3px solid ${RAIL_COLOR[stage] ?? '#6A5E51'}` }}
+      className={`relative w-full text-left overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-saffron ${dragging ? 'cursor-grab active:cursor-grabbing' : ''} ${order.urgent ? 'bg-ember-wash' : 'bg-paper'}`}
+      style={{ borderLeft: `3px solid ${railColor}` }}
     >
       {/* New-order pulse overlay */}
       {pulsing && (
@@ -44,13 +45,20 @@ export function OrderTicket({ order, pulsing, tick: _tick, onClick, onDragStart 
       )}
 
       <div className="px-3 pt-3 pb-2.5 space-y-2">
-        {/* Header row: table label + timer */}
-        <div className="flex items-center justify-between">
-          <span className="font-mono text-mono text-ink font-semibold tracking-tight uppercase">
-            {order.table_label ?? '—'}
-          </span>
+        {/* Header row: table label + urgent badge + timer */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <span className="font-mono text-mono text-ink font-semibold tracking-tight uppercase shrink-0">
+              {order.table_label ?? '—'}
+            </span>
+            {order.urgent && (
+              <span className="text-[9px] font-bold tracking-widest text-ember uppercase shrink-0">
+                Urgent order
+              </span>
+            )}
+          </div>
           {stage !== 'picked_up' && stage !== 'cancelled' && (
-            <span className={`font-mono text-mono tabular-nums ${TIMER_CLASS[tc]}`}>
+            <span className={`font-mono text-mono tabular-nums shrink-0 ${TIMER_CLASS[tc]}`}>
               {fmtTimer(elapsed)}
             </span>
           )}
@@ -62,9 +70,11 @@ export function OrderTicket({ order, pulsing, tick: _tick, onClick, onDragStart 
             const plan = Boolean(item.restaurant_plan_id)
             const title = item.restaurant_plans?.title ?? item.menu_items?.name ?? '—'
             const detailLines =
-              plan && item.restaurant_plans?.includes?.length
-                ? item.restaurant_plans.includes
-                : item.modifiers ?? []
+              item.modifiers?.length
+                ? item.modifiers
+                : (plan && item.restaurant_plans?.includes?.length
+                  ? item.restaurant_plans.includes
+                  : [])
             return (
               <li key={item.id}>
                 <span className="font-mono text-[11px] text-ink-6 mr-1.5">
@@ -81,7 +91,7 @@ export function OrderTicket({ order, pulsing, tick: _tick, onClick, onDragStart 
                 {detailLines.length > 0 && (
                   <div className="mt-0.5 pl-5 space-y-0.5">
                     {detailLines.map((mod, i) => (
-                      <p key={i} className="text-[11px] text-ember leading-tight">
+                      <p key={i} className={`text-[11px] leading-tight ${plan ? 'text-ink-5' : 'text-ember'}`}>
                         {mod}
                       </p>
                     ))}

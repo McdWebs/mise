@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { ExternalLink, X, RefreshCw, Smartphone } from 'lucide-react'
 import { useAdminMenu } from '../hooks/useAdminMenu'
 import { MenuCategoryList } from '../components/MenuCategoryList'
 import { MenuItemTable } from '../components/MenuItemTable'
@@ -7,6 +8,104 @@ import { MenuImportModal } from '../components/MenuImportModal'
 import { Sk } from '../components/Skeleton'
 import type { AdminMenuCategory, AdminMenuItem } from '../hooks/useAdminMenu'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
+
+const PREVIEW_TABLE = '1'
+
+interface MenuPreviewPanelProps {
+  slug: string
+  onClose: () => void
+}
+
+function MenuPreviewPanel({ slug, onClose }: MenuPreviewPanelProps) {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+  const [loading, setLoading] = useState(true)
+  const previewUrl = `${window.location.origin}/r/${slug}?table=${encodeURIComponent(PREVIEW_TABLE)}`
+
+  function reload() {
+    if (iframeRef.current) {
+      setLoading(true)
+      iframeRef.current.src = previewUrl
+    }
+  }
+
+  // Close on Escape
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-40 bg-ink/40 backdrop-blur-[2px]"
+        onClick={onClose}
+      />
+
+      {/* Panel */}
+      <div className="fixed top-0 right-0 h-full z-50 flex flex-col bg-paper-2 border-l border-paper-3 shadow-2 w-full sm:w-[420px]">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-paper-3 bg-paper shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Smartphone size={15} className="text-ink-5 shrink-0" />
+            <span className="font-semibold text-body text-ink truncate">Guest menu preview</span>
+          </div>
+          <div className="flex items-center gap-1 shrink-0 ml-3">
+            <button
+              type="button"
+              onClick={reload}
+              title="Reload preview"
+              className="w-8 h-8 flex items-center justify-center rounded-2 text-ink-5 hover:text-ink hover:bg-paper-2 transition-colors duration-hover"
+            >
+              <RefreshCw size={14} />
+            </button>
+            <a
+              href={previewUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Open in new tab"
+              className="w-8 h-8 flex items-center justify-center rounded-2 text-ink-5 hover:text-ink hover:bg-paper-2 transition-colors duration-hover"
+            >
+              <ExternalLink size={14} />
+            </a>
+            <button
+              type="button"
+              onClick={onClose}
+              title="Close preview"
+              className="w-8 h-8 flex items-center justify-center rounded-2 text-ink-5 hover:text-ink hover:bg-paper-2 transition-colors duration-hover"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        </div>
+
+        {/* iframe */}
+        <div className="flex-1 relative min-h-0">
+          {loading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-paper-2">
+              <div className="w-5 h-5 border-2 border-paper-3 border-t-saffron rounded-full animate-spin" />
+            </div>
+          )}
+          <iframe
+            ref={iframeRef}
+            src={previewUrl}
+            title="Guest menu preview"
+            className="w-full h-full border-0"
+            onLoad={() => setLoading(false)}
+          />
+        </div>
+
+        {/* Footer note */}
+        <div className="px-4 py-2.5 border-t border-paper-3 bg-paper shrink-0">
+          <p className="text-[11px] text-ink-6 text-center">
+            Showing as table {PREVIEW_TABLE} · Changes appear after save
+          </p>
+        </div>
+      </div>
+    </>
+  )
+}
 
 interface MenuPageProps {
   restaurant: AdminRestaurant
@@ -21,6 +120,7 @@ export function MenuPage({ restaurant }: MenuPageProps) {
   // Item drawer state: undefined=closed, null=new, AdminMenuItem=edit
   const [editingItem, setEditingItem] = useState<AdminMenuItem | null | undefined>(undefined)
   const [importOpen, setImportOpen] = useState(false)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   // Sync from server
   useEffect(() => {
@@ -54,7 +154,14 @@ export function MenuPage({ restaurant }: MenuPageProps) {
             Edit categories, items, prices, and availability.
           </div>
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex gap-2 shrink-0 flex-wrap">
+          <button
+            onClick={() => setPreviewOpen(true)}
+            className="flex-1 sm:flex-none inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2 border border-paper-4 bg-paper text-ink text-body font-semibold hover:bg-paper-2 transition-colors duration-hover"
+          >
+            <Smartphone size={15} className="text-ink-5 shrink-0" />
+            Preview
+          </button>
           <button
             onClick={() => setImportOpen(true)}
             className="flex-1 sm:flex-none px-4 py-2.5 rounded-2 border border-paper-4 bg-paper text-ink text-body font-semibold hover:bg-paper-2 transition-colors duration-hover"
@@ -114,6 +221,13 @@ export function MenuPage({ restaurant }: MenuPageProps) {
           restaurantId={restaurant.id}
           existingCategories={categories}
           onClose={() => setImportOpen(false)}
+        />
+      )}
+
+      {previewOpen && (
+        <MenuPreviewPanel
+          slug={restaurant.slug}
+          onClose={() => setPreviewOpen(false)}
         />
       )}
     </>

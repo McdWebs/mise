@@ -45,12 +45,23 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
   // 'suspend' | 'resume' | null — waiting for inline confirmation
   const [confirming, setConfirming] = useState<'suspend' | 'resume' | null>(null)
 
+  // Edit details
+  const [editName, setEditName] = useState(tenant?.name ?? '')
+  const [editTagline, setEditTagline] = useState(tenant?.tagline ?? '')
+  const [detailsSaving, setDetailsSaving] = useState(false)
+  const [detailsSaved, setDetailsSaved] = useState(false)
+  const [detailsError, setDetailsError] = useState('')
+
   // Sync local state when tenant prop changes (e.g. new tenant opened)
   useEffect(() => {
     if (tenant) {
       setSuspended(tenant.suspended)
       setActionError('')
       setConfirming(null)
+      setEditName(tenant.name)
+      setEditTagline(tenant.tagline ?? '')
+      setDetailsError('')
+      setDetailsSaved(false)
     }
   }, [tenant?.id])
 
@@ -66,6 +77,30 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
     else document.body.style.overflow = ''
     return () => { document.body.style.overflow = '' }
   }, [open])
+
+  async function saveDetails() {
+    if (!tenant) return
+    const trimmedName = editName.trim()
+    if (!trimmedName) { setDetailsError('Name cannot be empty.'); return }
+    setDetailsSaving(true)
+    setDetailsError('')
+
+    const { error } = await supabase
+      .from('restaurants')
+      .update({ name: trimmedName, tagline: editTagline.trim() || null })
+      .eq('id', tenant.id)
+
+    if (error) {
+      setDetailsError(error.message || 'Update failed — check your permissions.')
+      setDetailsSaving(false)
+      return
+    }
+
+    await qc.invalidateQueries({ queryKey: ['fleet'] })
+    setDetailsSaving(false)
+    setDetailsSaved(true)
+    setTimeout(() => setDetailsSaved(false), 2000)
+  }
 
   async function setSuspendedState(value: boolean) {
     if (!tenant) return
@@ -151,6 +186,38 @@ export function TenantInspector({ tenant, onClose }: TenantInspectorProps) {
                   <span className="font-mono tabular-nums text-ink">{v}</span>
                 </div>
               ))}
+            </div>
+
+            {/* Edit details */}
+            <div className="py-3.5 border-b border-paper-3">
+              <h3 className="text-overline text-ink-6 uppercase tracking-widest mb-2.5">Edit details</h3>
+              <div className="flex flex-col gap-2">
+                <div>
+                  <label className="text-[11px] text-ink-6 font-medium uppercase tracking-wide mb-1 block">Name</label>
+                  <input
+                    value={editName}
+                    onChange={e => { setEditName(e.target.value); setDetailsError('') }}
+                    className="w-full px-3 py-2 border-[1.5px] border-paper-4 rounded-2 text-body-sm text-ink bg-paper focus-visible:outline-none focus-visible:border-saffron transition-[border-color] duration-standard"
+                  />
+                </div>
+                <div>
+                  <label className="text-[11px] text-ink-6 font-medium uppercase tracking-wide mb-1 block">Tagline</label>
+                  <input
+                    value={editTagline}
+                    onChange={e => { setEditTagline(e.target.value); setDetailsError('') }}
+                    placeholder="e.g. Modern Provençal · Mile End"
+                    className="w-full px-3 py-2 border-[1.5px] border-paper-4 rounded-2 text-body-sm text-ink bg-paper placeholder:text-ink-7 focus-visible:outline-none focus-visible:border-saffron transition-[border-color] duration-standard"
+                  />
+                </div>
+                {detailsError && <p className="text-body-sm text-ember">{detailsError}</p>}
+                <button
+                  onClick={saveDetails}
+                  disabled={detailsSaving}
+                  className="w-fit px-3.5 py-2 rounded-2 bg-ink text-paper text-body-sm font-semibold hover:bg-ink-3 transition-colors duration-hover disabled:opacity-50"
+                >
+                  {detailsSaved ? 'Saved!' : detailsSaving ? 'Saving…' : 'Save details'}
+                </button>
+              </div>
             </div>
 
             {/* Open in */}

@@ -1,16 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { useSearchParams, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useKitchenOrders } from '../hooks/useKitchenOrders'
-import { useWaiterCalls } from '../hooks/useWaiterCalls'
 import { KitchenTopBar } from '../components/KitchenTopBar'
 import { LaneColumn } from '../components/LaneColumn'
 import { TicketDrawer } from '../components/TicketDrawer'
-import { TableFloor } from '../components/TableFloor'
 import type { OrderStage } from '@mise/types'
-
-type KitchenView = 'orders' | 'tables'
 
 const STAGES = ['received', 'cooking', 'ready', 'picked_up'] as const
 
@@ -24,8 +20,6 @@ function Spinner() {
 
 export default function KitchenPage() {
   const { restaurantId } = useParams<{ restaurantId: string }>()
-  const [searchParams, setSearchParams] = useSearchParams()
-  const view: KitchenView = searchParams.get('view') === 'tables' ? 'tables' : 'orders'
 
   const { data: restaurant, isLoading: restaurantLoading } = useQuery({
     queryKey: ['kitchen-restaurant', restaurantId],
@@ -42,24 +36,11 @@ export default function KitchenPage() {
     staleTime: 1000 * 60 * 5,
   })
 
-  const { orders, pulsingId, loading: ordersLoading, applyOrderStage, restoreKitchenOrder } =
+  const { orders, pulsingId, loading: ordersLoading, applyOrderStage, applyOrderUrgent, restoreKitchenOrder } =
     useKitchenOrders(restaurantId)
-  const { calls, acknowledgeCall, acknowledgeAllForTable } = useWaiterCalls(restaurantId)
 
   const [accepting, setAccepting] = useState<boolean>(true)
   const acceptingRef = useRef(accepting)
-
-  function setView(next: KitchenView) {
-    setSearchParams(
-      prev => {
-        const p = new URLSearchParams(prev)
-        if (next === 'orders') p.delete('view')
-        else p.set('view', 'tables')
-        return p
-      },
-      { replace: true }
-    )
-  }
 
   useEffect(() => {
     if (restaurant?.accepting_orders !== undefined) {
@@ -121,45 +102,31 @@ export default function KitchenPage() {
         restaurantName={restaurant.name}
         accepting={accepting}
         orders={orders}
-        view={view}
-        waiterCallCount={calls.length}
-        onViewChange={setView}
       />
 
-      {view === 'orders' ? (
-        <>
-          <div className="flex-1 grid min-h-0 overflow-hidden" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-            {STAGES.map(stage => (
-              <LaneColumn
-                key={stage}
-                stage={stage}
-                orders={byStage(stage)}
-                pulsingId={pulsingId}
-                tick={tick}
-                onSelect={o => setSelectedId(o.id)}
-                onDropOrder={(orderId, targetStage) => {
-                  void moveOrderToStage(orderId, targetStage as (typeof STAGES)[number])
-                }}
-              />
-            ))}
-          </div>
-
-          <TicketDrawer
-            order={selectedOrder}
-            onClose={() => setSelectedId(null)}
-            applyOrderStage={applyOrderStage}
-            restoreKitchenOrder={restoreKitchenOrder}
+      <div className="flex-1 grid min-h-0 overflow-hidden" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+        {STAGES.map(stage => (
+          <LaneColumn
+            key={stage}
+            stage={stage}
+            orders={byStage(stage)}
+            pulsingId={pulsingId}
+            tick={tick}
+            onSelect={o => setSelectedId(o.id)}
+            onDropOrder={(orderId, targetStage) => {
+              void moveOrderToStage(orderId, targetStage as (typeof STAGES)[number])
+            }}
           />
-        </>
-      ) : (
-        <TableFloor
-          restaurantId={restaurant.id}
-          restaurantSlug={restaurant.slug}
-          calls={calls}
-          onAckCall={acknowledgeCall}
-          onAckCallsForTable={acknowledgeAllForTable}
-        />
-      )}
+        ))}
+      </div>
+
+      <TicketDrawer
+        order={selectedOrder}
+        onClose={() => setSelectedId(null)}
+        applyOrderStage={applyOrderStage}
+        applyOrderUrgent={applyOrderUrgent}
+        restoreKitchenOrder={restoreKitchenOrder}
+      />
     </div>
   )
 }

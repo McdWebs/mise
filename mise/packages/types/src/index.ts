@@ -18,6 +18,7 @@ export interface Restaurant {
   name: string
   tagline: string | null
   currency: string
+  base_prep_minutes: number
   accepting_orders: boolean
   suspended: boolean
   created_at: string
@@ -54,6 +55,8 @@ export interface Order {
   table_label: string
   stage: OrderStage
   subtotal_cents: number
+  estimated_ready_at: string | null
+  urgent: boolean
   created_at: string
   updated_at: string
 }

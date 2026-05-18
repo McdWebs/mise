@@ -5,6 +5,7 @@ export interface FleetTenant {
   id: string
   name: string
   slug: string
+  tagline: string | null
   currency: string
   accepting_orders: boolean
   suspended: boolean
@@ -43,7 +44,7 @@ export function useFleet() {
 
       // Fetch all restaurants (requires super_admin RLS bypass)
       const [{ data: restaurants, error: rErr }, { data: orders, error: oErr }, { data: unreadMsgs }] = await Promise.all([
-        supabase.from('restaurants').select('id, name, slug, currency, accepting_orders, suspended'),
+        supabase.from('restaurants').select('id, name, slug, tagline, currency, accepting_orders, suspended'),
         supabase
           .from('orders')
           .select('restaurant_id, subtotal_cents, updated_at')
@@ -79,7 +80,7 @@ export function useFleet() {
         })
       }
 
-      type RestaurantRow = { id: string; name: string; slug: string; currency: string; accepting_orders: boolean; suspended: boolean }
+      type RestaurantRow = { id: string; name: string; slug: string; tagline: string | null; currency: string; accepting_orders: boolean; suspended: boolean }
 
       const tenants: FleetTenant[] = (restaurants as RestaurantRow[] ?? []).map(r => {
         const stats = statsByRestaurant.get(r.id) ?? { count: 0, revenue: 0, lastAt: null }
@@ -88,6 +89,7 @@ export function useFleet() {
           id: r.id,
           name: r.name,
           slug: r.slug,
+          tagline: r.tagline ?? null,
           currency: r.currency,
           accepting_orders: r.accepting_orders,
           suspended: r.suspended,

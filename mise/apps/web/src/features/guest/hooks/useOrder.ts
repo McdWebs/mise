@@ -16,7 +16,7 @@ export function useOrder(orderId: string | undefined) {
         .eq('id', orderId!)
         .maybeSingle()
       if (error) throw error
-      return data
+      return data as Order | null
     },
     enabled: Boolean(orderId),
     staleTime: 0,
@@ -35,7 +35,7 @@ export function useOrder(orderId: string | undefined) {
           const updated = payload.new as Order
           setRealtimeStage(updated.stage)
           queryClient.setQueryData<Order | null>(['order', orderId], old =>
-            old ? { ...old, stage: updated.stage } : old
+            old ? { ...old, stage: updated.stage } : old as Order | null
           )
         }
       )

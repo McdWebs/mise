@@ -20,6 +20,7 @@ import { AssistantSheet } from '../components/AssistantSheet'
 import { PlansSection } from '../components/PlansSection'
 import { usePlans } from '../hooks/usePlans'
 import { useTableOrders } from '../hooks/useTableOrders'
+import { useEstimatedWait } from '../hooks/useEstimatedWait'
 import type { RestaurantPlan } from '../hooks/usePlans'
 import { PlanSheet } from '../components/PlanSheet'
 import { TableOrdersSheet } from '../components/TableOrdersSheet'
@@ -80,6 +81,7 @@ export default function GuestMenuPage() {
   const ordersTableLabel = guestTable?.label ?? tableParam
   // Only show orders placed since the last table clear (treats each turnover as a fresh session)
   const { data: tableOrders = [] } = useTableOrders(restaurant?.id, ordersTableLabel, guestTable?.cleared_at)
+  const { data: estimatedMinutes } = useEstimatedWait(restaurant?.id, restaurant?.base_prep_minutes ?? 12)
 
   const queryClient = useQueryClient()
   const { addLine, getLines, getTotalCents, getTotalItems, clearCart } = useCartStore()
@@ -135,7 +137,7 @@ export default function GuestMenuPage() {
     setSubmitting(true)
     setSubmitError(null)
     try {
-      const { orderId } = await submitOrder({ restaurantId, tableLabel, lines })
+      const { orderId } = await submitOrder({ restaurantId, tableLabel, lines, basePrepMinutes: restaurant?.base_prep_minutes ?? 12 })
       clearCart(restaurantId)
       setCartOpen(false)
       navigate(`/r/${slug}/order/${orderId}?table=${encodeURIComponent(tableLabel)}`)
@@ -147,13 +149,13 @@ export default function GuestMenuPage() {
     }
   }
 
-  function handleAddPlan(plan: RestaurantPlan) {
+  function handleAddPlan(plan: RestaurantPlan, customDetailLines?: string[]) {
     addLine(restaurantId, {
       kind: 'plan',
       planId: plan.id,
       name: plan.title,
       unitPriceCents: plan.price_cents,
-      detailLines: [...plan.includes],
+      detailLines: customDetailLines ?? [...plan.includes],
       modifiers: [],
     })
   }
@@ -296,6 +298,7 @@ export default function GuestMenuPage() {
           tableLabel={tableLabel}
           onMyOrders={() => setOrdersSheetOpen(true)}
           orderCount={tableOrders.length}
+          estimatedMinutes={estimatedMinutes}
         />
 
         <CategoryNav
@@ -388,8 +391,8 @@ export default function GuestMenuPage() {
           currency={restaurant.currency}
           includedItems={getPlanIncludedItems(openPlan)}
           onClose={() => setOpenPlan(null)}
-          onAddPlan={plan => {
-            handleAddPlan(plan)
+          onAddPlan={(plan, detailLines) => {
+            handleAddPlan(plan, detailLines)
             setOpenPlan(null)
           }}
         />

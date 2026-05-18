@@ -10,23 +10,21 @@ import { SupportPage } from './SupportPage'
 import { OverviewPage } from './OverviewPage'
 import { MenuPage } from './MenuPage'
 import { SettingsPage } from './SettingsPage'
-import { OrdersPage } from './OrdersPage'
 import { AssistantPage } from './AssistantPage'
 import { PlansPage } from './PlansPage'
 import { TablesPage } from './TablesPage'
 
-type AdminPage = 'overview' | 'menu' | 'settings' | 'orders' | 'assistant' | 'plans' | 'tables' | 'support'
+type AdminPage = 'overview' | 'menu' | 'settings' | 'assistant' | 'plans' | 'tables' | 'support'
 
 const NAV: { id: AdminPage; label: string }[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'menu',     label: 'Menu'     },
+  { id: 'tables',   label: 'Tables'   },
   { id: 'plans',    label: 'Plans'    },
   { id: 'settings', label: 'Settings' },
 ]
 
 const NAV_INSIGHTS: { id: AdminPage; label: string }[] = [
-  { id: 'orders',    label: 'Orders'    },
-  { id: 'tables',    label: 'Tables'    },
   { id: 'assistant', label: 'Assistant' },
 ]
 
@@ -367,10 +365,9 @@ export default function AdminShell() {
           <Route index element={<Navigate to={adminPath('overview')} replace />} />
           <Route path="overview"  element={<OverviewPage  restaurant={restaurant} />} />
           <Route path="menu"      element={<MenuPage      restaurant={restaurant} />} />
+          <Route path="tables"    element={<TablesPage    restaurant={restaurant} />} />
           <Route path="plans"     element={<PlansPage     restaurant={restaurant} />} />
           <Route path="settings"  element={<SettingsPage  restaurant={restaurant} />} />
-          <Route path="orders"    element={<OrdersPage    restaurant={restaurant} />} />
-          <Route path="tables"    element={<TablesPage    restaurant={restaurant} />} />
           <Route path="assistant" element={<AssistantPage restaurant={restaurant} />} />
           <Route path="support"   element={<SupportPage   restaurant={restaurant} />} />
           <Route path="*"         element={<Navigate to={adminPath('overview')} replace />} />

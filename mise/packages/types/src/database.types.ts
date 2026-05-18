@@ -49,6 +49,7 @@ export interface Database {
           name: string
           tagline: string | null
           currency: string
+          base_prep_minutes: number
           accepting_orders: boolean
           suspended: boolean
           assistant_instructions: string | null
@@ -61,6 +62,7 @@ export interface Database {
           name: string
           tagline?: string | null
           currency?: string
+          base_prep_minutes?: number
           accepting_orders?: boolean
           suspended?: boolean
           assistant_instructions?: string | null
@@ -73,6 +75,7 @@ export interface Database {
           name?: string
           tagline?: string | null
           currency?: string
+          base_prep_minutes?: number
           accepting_orders?: boolean
           suspended?: boolean
           assistant_instructions?: string | null
@@ -239,6 +242,7 @@ export interface Database {
           table_label: string
           stage: OrderStage
           subtotal_cents: number
+          urgent: boolean
           created_at: string
           updated_at: string
         }
@@ -248,6 +252,7 @@ export interface Database {
           table_label: string
           stage?: OrderStage
           subtotal_cents: number
+          urgent?: boolean
           created_at?: string
           updated_at?: string
         }
@@ -257,6 +262,7 @@ export interface Database {
           table_label?: string
           stage?: OrderStage
           subtotal_cents?: number
+          urgent?: boolean
           created_at?: string
           updated_at?: string
         }

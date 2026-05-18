@@ -37,6 +37,9 @@ interface SettingsPageProps {
 const inputClass =
   'w-full sm:max-w-[360px] px-3 py-2.5 border-[1.5px] border-paper-4 rounded-2 text-body text-ink bg-paper focus-visible:outline-none focus-visible:border-saffron transition-[border-color] duration-standard'
 
+const inputDisabledClass =
+  'w-full sm:max-w-[360px] px-3 py-2.5 border-[1.5px] border-paper-3 rounded-2 text-body text-ink-5 bg-paper-2 cursor-not-allowed select-none'
+
 function SettingRow({
   label,
   description,
@@ -76,6 +79,7 @@ export function SettingsPage({ restaurant }: SettingsPageProps) {
   const [name, setName] = useState(restaurant.name)
   const [tagline, setTagline] = useState(restaurant.tagline ?? '')
   const [currency, setCurrency] = useState(restaurant.currency)
+  const [basePrepMinutes, setBasePrepMinutes] = useState(restaurant.base_prep_minutes ?? 12)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -103,9 +107,8 @@ export function SettingsPage({ restaurant }: SettingsPageProps) {
   async function save() {
     setSaving(true)
     await supabase.from('restaurants').update({
-      name: name.trim(),
-      tagline: tagline.trim() || null,
       currency: currency.trim(),
+      base_prep_minutes: Math.max(1, Math.min(120, basePrepMinutes)),
     }).eq('id', restaurant.id)
     await qc.invalidateQueries({ queryKey: ['admin-restaurant'] })
     setSaving(false)
@@ -167,16 +170,16 @@ export function SettingsPage({ restaurant }: SettingsPageProps) {
           Public
         </h2>
 
-        <SettingRow label="Restaurant name" description="Shown on the guest menu header.">
-          <input value={name} onChange={e => setName(e.target.value)} className={inputClass} />
+        <SettingRow label="Restaurant name" description="Shown on the guest menu header. Managed by Mise — contact support to change.">
+          <input value={name} disabled className={inputDisabledClass} />
         </SettingRow>
 
-        <SettingRow label="Tagline" description="One line, under the name.">
+        <SettingRow label="Tagline" description="One line, under the name. Managed by Mise — contact support to change.">
           <input
             value={tagline}
-            onChange={e => setTagline(e.target.value)}
+            disabled
             placeholder="e.g. Modern Provençal · Mile End"
-            className={`${inputClass} placeholder:text-ink-6`}
+            className={inputDisabledClass}
           />
         </SettingRow>
 
@@ -208,6 +211,23 @@ export function SettingsPage({ restaurant }: SettingsPageProps) {
               <option key={c.code} value={c.code}>{c.label}</option>
             ))}
           </select>
+        </SettingRow>
+
+        <SettingRow
+          label="Base prep time"
+          description="Baseline minutes to prepare an order. The estimate auto-adjusts for queue depth and busy hours."
+        >
+          <div className="flex items-center gap-2 sm:max-w-[360px]">
+            <input
+              type="number"
+              min={1}
+              max={120}
+              value={basePrepMinutes}
+              onChange={e => setBasePrepMinutes(Math.max(1, Math.min(120, Number(e.target.value) || 1)))}
+              className={`${inputClass} w-24`}
+            />
+            <span className="text-body-sm text-ink-6 shrink-0">min</span>
+          </div>
         </SettingRow>
 
         <SettingRow label="Ordering" description="Pause to stop accepting new orders without taking the menu down.">

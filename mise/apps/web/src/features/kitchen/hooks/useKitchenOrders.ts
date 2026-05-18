@@ -126,9 +126,10 @@ function ordersSignature(list: KitchenOrder[]): string {
 }
 
 function sortOrdersKitchen(prev: KitchenOrder[]): KitchenOrder[] {
-  return [...prev].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  )
+  return [...prev].sort((a, b) => {
+    if (a.urgent !== b.urgent) return a.urgent ? -1 : 1
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  })
 }
 
 export function useKitchenOrders(restaurantId: string | undefined) {
@@ -146,6 +147,13 @@ export function useKitchenOrders(restaurantId: string | undefined) {
         prev.map(o => (o.id === orderId ? { ...o, stage, updated_at: now } : o))
       )
     })
+  }
+
+  /** Instant UI: flip urgent flag. Server sync via Supabase. */
+  function applyOrderUrgent(orderId: string, urgent: boolean) {
+    setOrders(prev => sortOrdersKitchen(
+      prev.map(o => (o.id === orderId ? { ...o, urgent } : o))
+    ))
   }
 
   /** Put an order back in the list (e.g. cancel failed). */
@@ -301,5 +309,5 @@ export function useKitchenOrders(restaurantId: string | undefined) {
     return () => { supabase.removeChannel(channel) }
   }, [restaurantId])
 
-  return { orders, pulsingId, loading, applyOrderStage, restoreKitchenOrder }
+  return { orders, pulsingId, loading, applyOrderStage, applyOrderUrgent, restoreKitchenOrder }
 }

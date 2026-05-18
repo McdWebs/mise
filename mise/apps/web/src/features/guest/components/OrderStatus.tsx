@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Bell, Check, CheckCircle2, Loader2, PlusCircle } from 'lucide-react'
 import type { Order, OrderItem } from '@mise/types'
@@ -15,6 +15,37 @@ interface OrderStatusProps {
   slug: string
   currency: string
   tableOrders: TableOrder[]
+}
+
+function EtaTimer({ estimatedReadyAt }: { estimatedReadyAt: string | null }) {
+  const [now, setNow] = useState(() => Date.now())
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1_000)
+    return () => clearInterval(id)
+  }, [])
+
+  if (!estimatedReadyAt) return null
+
+  const secsLeft = Math.round((new Date(estimatedReadyAt).getTime() - now) / 1_000)
+  const isLate = secsLeft <= 0
+
+  const display = isLate
+    ? 'Almost ready'
+    : `${String(Math.floor(secsLeft / 60)).padStart(2, '0')}:${String(secsLeft % 60).padStart(2, '0')}`
+
+  return (
+    <div className="flex flex-col items-center gap-1 my-1">
+      <span className={`font-mono text-[42px] font-bold leading-none tabular-nums tracking-tight ${
+        isLate ? 'text-herb-2' : 'text-saffron-3'
+      }`}>
+        {display}
+      </span>
+      <span className="text-[11px] font-medium text-ink-6 uppercase tracking-[0.08em]">
+        {isLate ? 'finishing up' : 'estimated wait'}
+      </span>
+    </div>
+  )
 }
 
 const STAGE_STEPS: { stage: OrderStage; label: string }[] = [
@@ -79,6 +110,11 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
         <h1 className="font-display text-[32px] font-[500] tracking-[-0.02em] text-ink font-optical">
           {STAGE_HEADLINE[order.stage] ?? order.stage}
         </h1>
+        {(order.stage === 'received' || order.stage === 'cooking') && (
+          <div className="flex justify-center mt-3 mb-1">
+            <EtaTimer estimatedReadyAt={order.estimated_ready_at} />
+          </div>
+        )}
         <p className="font-mono text-[12px] text-ink-6 mt-1 tabular-nums">
           #{order.id.slice(0, 8).toUpperCase()}
         </p>
