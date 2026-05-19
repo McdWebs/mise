@@ -271,10 +271,10 @@ export default function GuestMenuPage() {
               persistCoverChoice(restaurant.id, guestTable.id, guestTable.cleared_at, seat)
               setSeatNumber(seat)
               setEnteredMenuThisMount(true)
-              void supabase.rpc('mark_table_occupied', {
+              supabase.rpc('mark_table_occupied', {
                 p_table_id: guestTable.id,
                 p_restaurant_id: restaurant.id,
-              })
+              }).then(({ error }) => { if (error) console.error('[mark_table_occupied]', error) })
             }}
           />
         </div>
@@ -445,6 +445,7 @@ export default function GuestMenuPage() {
         <TableOrdersSheet
           slug={slug ?? ''}
           tableLabel={tableLabel}
+          seatNumber={seatNumber}
           currency={restaurant.currency}
           orders={tableOrders}
           onClose={() => setOrdersSheetOpen(false)}

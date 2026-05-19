@@ -74,6 +74,9 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
   const [helpSent, setHelpSent] = useState(false)
   const [helpLoading, setHelpLoading] = useState(false)
 
+  const seatMatch = order.table_label?.match(/· Seat (\d+)$/)
+  const seatNumber = seatMatch ? parseInt(seatMatch[1], 10) : null
+
   /** Index of the active step, or `STAGE_STEPS.length` when every step is complete (e.g. picked up). */
   const activeStepIndex = (() => {
     if (order.stage === 'picked_up') return STAGE_STEPS.length
@@ -104,9 +107,16 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
     <div className="px-5 py-6 pb-10">
       {/* Stage header */}
       <div className="text-center mb-8">
-        <p className="text-overline text-ink-6 uppercase tracking-[0.08em] mb-2">
-          Order sent · {tableLabel}
-        </p>
+        <div className="flex items-center justify-center gap-2 mb-2">
+          <p className="text-overline text-ink-6 uppercase tracking-[0.08em]">
+            Order sent · {tableLabel}
+          </p>
+          {seatNumber != null && (
+            <span className="inline-flex items-center h-5 px-2 rounded-full bg-saffron/10 border border-saffron/25 font-mono text-[10px] font-semibold text-saffron-3 tracking-wide whitespace-nowrap">
+              Seat {seatNumber}
+            </span>
+          )}
+        </div>
         <h1 className="font-display text-[32px] font-[500] tracking-[-0.02em] text-ink font-optical">
           {STAGE_HEADLINE[order.stage] ?? order.stage}
         </h1>
@@ -254,9 +264,11 @@ export function OrderStatus({ order, items, tableLabel, slug, currency, tableOrd
       {/* All orders at this table */}
       {tableOrders.length > 0 && (
         <div>
-          <h2 className="font-display text-[20px] font-[500] text-ink tracking-[-0.01em] font-optical mb-3">
-            All orders at {tableLabel}
-          </h2>
+          <div className="flex items-center gap-2 mb-3">
+            <h2 className="font-display text-[20px] font-[500] text-ink tracking-[-0.01em] font-optical">
+              {seatNumber != null ? `Seat ${seatNumber} orders` : `All orders at ${tableLabel}`}
+            </h2>
+          </div>
           <div className="space-y-3">
             {tableOrders.map(o => {
               const isCurrent = o.id === order.id

@@ -16,12 +16,13 @@ const STAGE_BADGE: Record<OrderStage, { label: string; color: string }> = {
 interface TableOrdersSheetProps {
   slug: string
   tableLabel: string
+  seatNumber?: number | null
   currency: string
   orders: TableOrder[]
   onClose: () => void
 }
 
-export function TableOrdersSheet({ slug, tableLabel, currency, orders, onClose }: TableOrdersSheetProps) {
+export function TableOrdersSheet({ slug, tableLabel, seatNumber, currency, orders, onClose }: TableOrdersSheetProps) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -73,9 +74,16 @@ export function TableOrdersSheet({ slug, tableLabel, currency, orders, onClose }
         <div className="w-9 h-1 bg-paper-4 rounded-pill mx-auto mt-1.5 mb-3.5" />
 
         <h2 className="font-display text-[22px] font-[500] tracking-[-0.01em] text-ink font-optical">
-          Your orders today
+          {seatNumber != null ? `Seat ${seatNumber} orders` : 'Your orders today'}
         </h2>
-        <p className="text-[14px] text-ink-5 mt-1 mb-4">{tableLabel}</p>
+        <div className="flex items-center gap-2 mt-1 mb-4">
+          <span className="text-[14px] text-ink-5">{tableLabel}</span>
+          {seatNumber != null && (
+            <span className="inline-flex items-center h-5 px-2 rounded-full bg-saffron/10 border border-saffron/25 font-mono text-[11px] font-semibold text-saffron-3 tracking-wide whitespace-nowrap">
+              Seat {seatNumber}
+            </span>
+          )}
+        </div>
 
         {orders.length === 0 ? (
           <p className="text-[15px] text-ink-5 py-6 text-center leading-relaxed">
