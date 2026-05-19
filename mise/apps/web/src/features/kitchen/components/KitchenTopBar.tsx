@@ -3,6 +3,7 @@ import { LogOut } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { OrderingToggle } from './OrderingToggle'
 import type { KitchenOrder } from '../hooks/useKitchenOrders'
+import { Mascot } from '@mise/ui'
 
 function liveClock(): string {
   const now = new Date()
@@ -43,14 +44,7 @@ export function KitchenTopBar({
     <header className="flex items-center gap-4 px-4 h-12 bg-ink-2 border-b border-ink-3 shrink-0">
       {/* Brand */}
       <div className="flex items-center gap-2 shrink-0">
-        <img
-          src="/assets/logo-mark-inverse.svg"
-          alt=""
-          width={20}
-          height={20}
-          className="rounded-1"
-          onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-        />
+        <Mascot pose="hello" theme="ink" size={32} accessory="none" />
         <span className="font-display text-[15px] font-[500] text-paper font-optical tracking-[-0.01em]">
           Mise
         </span>

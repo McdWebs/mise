@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Send, Sparkles } from 'lucide-react'
+import { Mascot } from '@mise/ui'
 import { supabase } from '@/lib/supabase'
 import { AssistantMessageContent } from '@/features/guest/components/AssistantMessageContent'
 import type { AdminRestaurant } from '../hooks/useAdminRestaurant'
@@ -566,10 +567,8 @@ export function SupportPage({ restaurant }: SupportPageProps) {
           <div className="flex-1 overflow-y-auto px-5 py-5">
             {isEmpty ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                <div className="w-12 h-12 rounded-full bg-saffron/10 flex items-center justify-center mb-4">
-                  <Sparkles size={20} className="text-saffron" />
-                </div>
-                <p className="text-body font-semibold text-ink mb-1">What can I help you with?</p>
+                <Mascot pose={aiLoading ? 'thinking' : 'listen'} theme="line" size={140} accessory="none" />
+                <p className="text-body font-semibold text-ink mb-1 mt-2">What can I help you with?</p>
                 <p className="text-body-sm text-ink-6 mb-6 max-w-[280px]">
                   Ask me anything about the Mise platform.
                 </p>

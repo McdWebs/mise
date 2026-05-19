@@ -3,6 +3,7 @@ import { Send, X, ShoppingCart, Check } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { AssistantMessageContent } from './AssistantMessageContent'
 import type { CartLineInput } from '../store/cartStore'
+import { Mascot } from '@mise/ui'
 
 interface SuggestedItem {
   id: string
@@ -305,8 +306,8 @@ export function AssistantSheet({ restaurantId, restaurantName, tableLabel, curre
 
         {/* Header */}
         <div className="shrink-0 flex items-center gap-2.5 mb-3">
-          <div className="w-8 h-8 rounded-full bg-ink text-saffron flex items-center justify-center font-display font-[500] text-[16px] shrink-0">
-            M
+          <div className="w-8 h-8 rounded-full bg-ink flex items-center justify-center shrink-0 overflow-hidden">
+            <Mascot pose={loading ? 'thinking' : 'listen'} theme="ink" size={32} accessory="none" />
           </div>
           <div>
             <p className="text-[14px] font-semibold text-ink">Mise · menu assistant</p>

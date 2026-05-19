@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Minus, Plus, Loader2 } from 'lucide-react'
+import { Minus, Plus } from 'lucide-react'
 import { useCartStore, cartLineKey, type CartLine } from '../store/cartStore'
 import { formatPriceExact } from '../utils/formatPrice'
+import { Mascot } from '@mise/ui'
 
 interface CartSheetProps {
   restaurantId: string
@@ -90,7 +91,7 @@ export function CartSheet({ restaurantId, currency, lines, restaurantName, table
       onClick={handleClose}
     >
       <div
-        className="w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 min-h-0 overflow-y-auto overscroll-contain"
+        className="relative w-full max-w-[420px] bg-paper rounded-t-[16px] px-5 pb-5 pt-2 min-h-0 overflow-y-auto overscroll-contain"
         style={{
           transform: open ? 'translateY(0)' : 'translateY(100%)',
           transition: 'transform 320ms cubic-bezier(0.2,0.8,0.2,1)',
@@ -111,6 +112,14 @@ export function CartSheet({ restaurantId, currency, lines, restaurantName, table
         <p className="text-[14px] text-ink-5 mt-1.5 mb-3">
           {tableLabel} · {restaurantName}
         </p>
+
+        {/* Empty cart state */}
+        {lines.length === 0 && (
+          <div className="flex flex-col items-center justify-center py-10">
+            <Mascot pose="hello" theme="line" size={160} accessory="none" />
+            <p className="text-body-sm text-ink-6 mt-3">Your cart is empty</p>
+          </div>
+        )}
 
         {/* Line items */}
         <div className="divide-y divide-paper-3">
@@ -228,6 +237,14 @@ export function CartSheet({ restaurantId, currency, lines, restaurantName, table
           </div>
         </div>
 
+        {/* Sending overlay */}
+        {submitting && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-ink rounded-t-[16px]">
+            <Mascot pose="running" theme="ink" size={170} accessory="none" />
+            <p className="text-paper font-semibold text-[16px] mt-3">Sending to kitchen…</p>
+          </div>
+        )}
+
         {/* Send to kitchen */}
         {lines.length > 0 && (
           <button
@@ -235,17 +252,8 @@ export function CartSheet({ restaurantId, currency, lines, restaurantName, table
             disabled={submitting}
             className="w-full h-12 mt-2 rounded-[10px] bg-saffron text-paper text-[15px] font-semibold flex items-center justify-between px-5 transition-colors duration-hover hover:bg-saffron-2 active:scale-[0.98] active:duration-press disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {submitting ? (
-              <span className="flex items-center gap-2 mx-auto">
-                <Loader2 size={16} className="animate-spin" />
-                Sending…
-              </span>
-            ) : (
-              <>
-                <span>Send to kitchen</span>
-                <span className="font-mono">{formatPriceExact(totalCents, currency)}</span>
-              </>
-            )}
+            <span>Send to kitchen</span>
+            <span className="font-mono">{formatPriceExact(totalCents, currency)}</span>
           </button>
         )}
 

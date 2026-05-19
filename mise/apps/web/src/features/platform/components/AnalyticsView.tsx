@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { X, MessageCircle, LifeBuoy, BellRing, ShoppingBag, Users, TrendingUp, ChevronRight } from 'lucide-react'
+import { Mascot } from '@mise/ui'
 import { usePlatformAnalytics } from '../hooks/usePlatformAnalytics'
 import { usePlatformCurrency } from '../hooks/usePlatformCurrency'
 import { DatePicker } from '@/features/admin/components/DatePicker'
@@ -432,6 +433,14 @@ export function AnalyticsView() {
     : '—'
 
   if (isLoading || !a) return <Skeleton />
+
+  if (a.totalVenues === 0) return (
+    <div className="flex flex-col items-center justify-center min-h-[60dvh] text-center">
+      <Mascot pose="hello" theme="line" size={140} accessory="none" />
+      <p className="text-body font-semibold text-ink mt-4">No venues yet</p>
+      <p className="text-body-sm text-ink-6 mt-1">Add the first restaurant to start seeing analytics.</p>
+    </div>
+  )
 
   const liveRatio = a.totalVenues > 0 ? Math.round((a.liveVenues / a.totalVenues) * 100) : 0
   const showDayChart = range !== 'today' && a.daily.length > 1

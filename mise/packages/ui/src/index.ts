@@ -38,3 +38,6 @@ export type { DropdownMenuProps, DropdownItem } from './components/DropdownMenu'
 export { ToastProvider, useToast } from './components/Toast'
 
 export { cn } from './lib/cn'
+
+export { Mascot } from './components/Mascot'
+export type { MascotProps, MascotPose, MascotTheme, MascotAccessory } from './components/Mascot'

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom'
 import { MonitorPlay, UtensilsCrossed, Menu, X } from 'lucide-react'
+import { Mascot } from '@mise/ui'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import { useSession } from '@/features/auth/hooks/useSession'
@@ -266,14 +267,7 @@ export default function AdminShell() {
       <aside className="hidden md:flex w-60 shrink-0 bg-paper border-r border-paper-3 flex-col sticky top-0 h-dvh overflow-y-auto">
         {/* Brand */}
         <div className="flex items-center gap-2.5 px-4 py-4 border-b border-paper-3 mb-4">
-          <img
-            src="/assets/logo-mark.svg"
-            alt=""
-            width={28}
-            height={28}
-            className="rounded-2"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-          />
+          <Mascot pose="hello" theme="line" size={36} accessory="none" />
           <span className="font-display text-[18px] font-[500] text-ink tracking-[-0.01em] font-optical">
             Mise
           </span>
@@ -284,14 +278,7 @@ export default function AdminShell() {
       {/* ── Mobile top bar (< md) ─────────────────────────────────────────── */}
       <div className="md:hidden fixed top-0 inset-x-0 z-30 h-14 bg-paper border-b border-paper-3 flex items-center justify-between px-4">
         <div className="flex items-center gap-2.5">
-          <img
-            src="/assets/logo-mark.svg"
-            alt=""
-            width={24}
-            height={24}
-            className="rounded-2"
-            onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-          />
+          <Mascot pose="hello" theme="line" size={28} accessory="none" />
           <span className="font-display text-[16px] font-[500] text-ink tracking-[-0.01em] font-optical truncate max-w-[180px]">
             {restaurant.name}
           </span>
@@ -317,14 +304,7 @@ export default function AdminShell() {
           {/* Drawer header */}
           <div className="flex items-center justify-between px-4 py-4 border-b border-paper-3 mb-4">
             <div className="flex items-center gap-2">
-              <img
-                src="/assets/logo-mark.svg"
-                alt=""
-                width={24}
-                height={24}
-                className="rounded-2"
-                onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
-              />
+              <Mascot pose="hello" theme="line" size={28} accessory="none" />
               <span className="font-display text-[17px] font-[500] text-ink tracking-[-0.01em] font-optical">Mise</span>
             </div>
             <button

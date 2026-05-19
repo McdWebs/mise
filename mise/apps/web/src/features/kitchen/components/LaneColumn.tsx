@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { KitchenOrder } from '../hooks/useKitchenOrders'
 import { OrderTicket } from './OrderTicket'
+import { Mascot } from '@mise/ui'
 
 /** MIME type for kitchen lane drag-and-drop (order id payload). */
 export const KITCHEN_ORDER_DRAG_TYPE = 'application/x-mise-order-id'
@@ -84,8 +85,8 @@ export function LaneColumn({ stage, orders, pulsingId, tick, onSelect, onDropOrd
         onDrop={handleDrop}
       >
         {orders.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center bg-ink-2 min-h-0">
-            <span className="text-body-sm text-ink-5">—</span>
+          <div className="flex flex-1 flex-col items-center justify-center bg-ink-2 min-h-0 py-4">
+            <Mascot pose="sleep" theme="line" size={120} accessory="none" />
           </div>
         ) : (
           orders.map(order => (

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Download } from 'lucide-react'
+import { Mascot } from '@mise/ui'
 import { supabase } from '@/lib/supabase'
 import { useQueryClient } from '@tanstack/react-query'
 import { KpiTile } from '../components/KpiTile'
@@ -515,7 +516,10 @@ export function OverviewPage({ restaurant }: OverviewPageProps) {
           </div>
 
           {orders.length === 0 ? (
-            <div className="px-5 py-10 text-center text-body-sm text-ink-6">No orders for this period.</div>
+            <div className="flex flex-col items-center py-10">
+              <Mascot pose="hello" theme="line" size={160} accessory="none" />
+              <p className="text-body-sm text-ink-6 mt-2">No orders for this period.</p>
+            </div>
           ) : (
             orders.map(order => {
               const isActive = ACTIVE_STAGES.includes(order.stage)
